@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Next Station Together</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="game-container">
+    <header class="game-header">
+        <div class="player-info">
+            <input type="text" id="player-name" placeholder="Enter your name">
+        </div>
+        <div class="color-selector">
+            <button class="color-btn" data-color="rgb(255, 145, 35)"></button>
+            <button class="color-btn" data-color="rgb(35, 228, 255)"></button>
+            <button class="color-btn" data-color="rgb(83, 225, 0)"></button>
+            <button class="color-btn" data-color="rgb(221, 107, 255)"></button>
+        </div>
+    </header>
+
+    <main class="game-board">
+        <canvas id="gameCanvas"></canvas>
+    </main>
+
+    <footer class="score-section">
+        <div class="score-grid">
+            <div class="score-row">
+                <div class="score-cell">×</div>
+                <div class="score-cell">×</div>
+                <div class="score-cell">×</div>
+                <div class="score-cell">×</div>
+                <div class="score-cell">×</div>
+            </div>
+            <div class="score-row">
+                <div class="score-cell">+</div>
+                <div class="score-cell">+</div>
+                <div class="score-cell">+</div>
+                <div class="score-cell">+</div>
+                <div class="score-cell">+</div>
+            </div>
+            <div class="score-row">
+                <div class="score-cell">=</div>
+                <div class="score-cell">=</div>
+                <div class="score-cell">=</div>
+                <div class="score-cell">=</div>
+                <div class="score-cell">=</div>
+            </div>
+        </div>
+        <div class="score-multipliers">
+            <div class="multiplier">×2</div>
+            <div class="multiplier">×5</div>
+            <div class="multiplier">×9</div>
+        </div>
+        <div class="final-score">
+            <div class="score-track">
+                <div class="score-point" data-value="0">0</div>
+                <div class="score-point" data-value="1">1</div>
+                <div class="score-point" data-value="2">2</div>
+                <div class="score-point" data-value="4">4</div>
+                <div class="score-point" data-value="6">6</div>
+                <div class="score-point" data-value="8">8</div>
+                <div class="score-point" data-value="11">11</div>
+                <div class="score-point" data-value="14">14</div>
+                <div class="score-point" data-value="17">17</div>
+                <div class="score-point" data-value="21">21</div>
+                <div class="score-point" data-value="25">25</div>
+            </div>
+        </div>
+    </footer>
+</div>
+<script src="game.js"></script>
+</body>
+</html>

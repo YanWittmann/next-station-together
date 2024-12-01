@@ -1,5 +1,6 @@
 package de.yanwittmann.nextstation.model;
 
+import de.yanwittmann.nextstation.setup.BoardOptimizer;
 import de.yanwittmann.nextstation.setup.BoardTemplates;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
@@ -14,19 +15,27 @@ import java.util.concurrent.TimeUnit;
 class GameBoardTest {
 
     @Test
-    public void createBoardTest() throws IOException {
-        final GameBoard board = BoardTemplates.start()
-                .sizeDefault()
-                .districtsLondon()
-                .stationsFullyFillRandom()
-                .stationsRemovePercent(0.47f, Map.of(BoardTemplates.LooseDistrictDefinition.CENTERMOST, 9), 4)
+    public void createBoardOptimizerTest() throws IOException {
+        final GameBoard board = BoardOptimizer.runIterations(() -> BoardTemplates.start()
+                                .districtsLondon()
+                                .stationsFullyFillEvenlyDistributed()
+                                .stationsRemovePercent(0.47f, Map.of(BoardTemplates.LooseDistrictDefinition.CENTERMOST, 9), 4),
+                                /*.districtsParis()
+                                .stationsFullyFillEvenlyDistributed()
+                                .stationsRemovePercent(0.52f, Map.of(BoardTemplates.LooseDistrictDefinition.CENTERMOST, 9), 4),*/
+                        BoardOptimizer.STATION_SPREAD, true, 1)
                 .stationsPickStartingLocations()
-                .stationRedistributeTypes(50)
+                .stationStartingRedistributeTypes()
                 .monumentPickRandomStationPerDistrict(2, 0.4f)
                 .pickJokerStations(List.of(BoardTemplates.LooseDistrictDefinition.CENTERMOST))
-                .build();
+                .connectionsConnectNeighbors()
+                .connectionsPruneMaxDistance(5)
+                .intersectionsAddRandomPerDistrict(3)
+                .connectionsPruneInvalidIntersections()
+                .riverGenerateRandomly(100, 5)
+                .getBoard();
 
-        board.finishSetup();
+
         board.writeSerialized(new File("target/createBoardTest"));
 
         BoardRendererTest.main(new String[]{});

@@ -2,16 +2,13 @@ package de.yanwittmann.nextstation.model;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import de.yanwittmann.nextstation.model.board.BoardDistrict;
-import de.yanwittmann.nextstation.model.board.RailwayConnection;
-import de.yanwittmann.nextstation.model.board.RailwayConnectionIntersection;
-import de.yanwittmann.nextstation.model.board.Station;
+import de.yanwittmann.nextstation.model.board.*;
 import de.yanwittmann.nextstation.model.card.StationCard;
 import de.yanwittmann.nextstation.model.score.ScoreContributor;
 import de.yanwittmann.nextstation.model.score.progress.ProgressScoreContributor;
-import de.yanwittmann.nextstation.setup.BoardTemplates;
 import de.yanwittmann.nextstation.util.TextureAccess;
 import de.yanwittmann.nextstation.util.TextureProviderAdapterFactory;
+import de.yanwittmann.nextstation.util.TmpIntersection;
 import lombok.Data;
 
 import java.io.File;
@@ -30,6 +27,7 @@ public class GameBoard {
     private final List<Station> stations = new ArrayList<>();
     private final List<RailwayConnection> connections = new ArrayList<>();
     private final List<RailwayConnectionIntersection> intersections = new ArrayList<>();
+    private RiverLayout riverLayout;
 
     // cards
     private final List<StationCard> stationCards = new ArrayList<>();
@@ -50,18 +48,6 @@ public class GameBoard {
 
     // scoring progress: A
     private ProgressScoreContributor progressScoreContributorA;
-
-    public void finishSetup() {
-        // connect stations with connections, compute neighbors
-        final BoardTemplates temp = BoardTemplates.start(this);
-        for (Station station : stations) {
-            final Set<Station> neighbors = temp.findNeighbors(station);
-            // add connections
-            for (Station neighbor : neighbors) {
-                connections.add(new RailwayConnection(station, neighbor));
-            }
-        }
-    }
 
     public String serialize() {
         final Gson gson = new GsonBuilder()
@@ -88,6 +74,9 @@ public class GameBoard {
         }
         for (StationCard card : stationCards) {
             TextureAccess.TextureData.write(card, imgDir);
+        }
+        for (RailwayConnectionIntersection intersection : intersections) {
+            TextureAccess.TextureData.write(intersection, imgDir);
         }
 
         TextureAccess.TextureData.write(turnWiseScoreContributorA, imgDir);
@@ -123,12 +112,16 @@ public class GameBoard {
     }
 
     public BoardDistrict findDistrict(Station station) {
+        return findDistrict(station.getX(), station.getY());
+    }
+
+    public BoardDistrict findDistrict(int x, int y) {
         // pick the smallest one that contains the station
         int smallestArea = Integer.MAX_VALUE;
         BoardDistrict smallestDistrict = null;
 
         for (BoardDistrict district : districts) {
-            if (district.containsGeometrically(station)) {
+            if (district.containsGeometrically(x, y)) {
                 final int area = district.area();
                 if (area < smallestArea) {
                     smallestArea = area;
@@ -152,6 +145,31 @@ public class GameBoard {
             }
         }
         return stationsPerDistrict;
+    }
+
+    public List<TmpIntersection> findTrueConnectionIntersectionsInDistrict(BoardDistrict district) {
+        final Map<Map.Entry<Integer, Integer>, TmpIntersection> intersections = new HashMap<>();
+        // iterate over all connections to check if the lines intersect, do not use the "intersections" list for this, this is only for visual representation
+        for (int i = 0; i < connections.size(); i++) {
+            final RailwayConnection connectionA = connections.get(i);
+            for (int j = i + 1; j < connections.size(); j++) {
+                final RailwayConnection connectionB = connections.get(j);
+                final Map.Entry<Integer, Integer> intersection = connectionA.intersection(connectionB);
+                if (intersection != null && district.containsGeometrically(intersection.getKey(), intersection.getValue())) {
+                    // intersection must not be a station
+                    if (getStationAt(intersection.getKey(), intersection.getValue()) != null) {
+                        continue;
+                    }
+                    final TmpIntersection tmpIntersection = intersections.computeIfAbsent(intersection, e -> new TmpIntersection(intersection.getKey(), intersection.getValue()));
+                    // add directions
+                    tmpIntersection.getDirections().add(connectionA.getDirection());
+                    tmpIntersection.getDirections().add(connectionB.getDirection());
+                    tmpIntersection.getConnections().add(connectionA);
+                    tmpIntersection.getConnections().add(connectionB);
+                }
+            }
+        }
+        return new ArrayList<>(intersections.values());
     }
 
     public BoardDistrict getClosestDistrict(int centerX, int centerY) {

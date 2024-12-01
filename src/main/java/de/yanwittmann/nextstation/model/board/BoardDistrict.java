@@ -18,4 +18,8 @@ public class BoardDistrict {
     public int area() {
         return width * height;
     }
+
+    public boolean containsGeometrically(int x, int y) {
+        return x >= this.x && x < this.x + width && y >= this.y && y < this.y + height;
+    }
 }

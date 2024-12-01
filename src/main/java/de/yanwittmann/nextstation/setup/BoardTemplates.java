@@ -1,8 +1,8 @@
 package de.yanwittmann.nextstation.setup;
 
 import de.yanwittmann.nextstation.model.GameBoard;
-import de.yanwittmann.nextstation.model.board.BoardDistrict;
-import de.yanwittmann.nextstation.model.board.Station;
+import de.yanwittmann.nextstation.model.board.*;
+import de.yanwittmann.nextstation.util.TmpIntersection;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
@@ -27,21 +27,16 @@ public class BoardTemplates {
         return new BoardTemplates(gameBoard);
     }
 
-    public GameBoard build() {
+    public GameBoard getBoard() {
         return gameBoard;
-    }
-
-    // size
-
-    public BoardTemplates sizeDefault() {
-        gameBoard.setWidth(10);
-        gameBoard.setHeight(10);
-        return this;
     }
 
     // district layout
 
     public BoardTemplates districtsLondon() {
+        gameBoard.setWidth(10);
+        gameBoard.setHeight(10);
+
         // top row
         gameBoard.getDistricts().add(new BoardDistrict(0, 0, 1, 1));
         gameBoard.getDistricts().add(new BoardDistrict(0, 0, 3, 3));
@@ -61,12 +56,57 @@ public class BoardTemplates {
         return this;
     }
 
+    public BoardTemplates districtsParis() {
+        gameBoard.setWidth(10);
+        gameBoard.setHeight(10);
+
+        // top row
+        gameBoard.getDistricts().add(new BoardDistrict(0, 0, 1, 1));
+        gameBoard.getDistricts().add(new BoardDistrict(0, 0, 5, 2));
+        gameBoard.getDistricts().add(new BoardDistrict(5, 0, 5, 2));
+        gameBoard.getDistricts().add(new BoardDistrict(9, 0, 1, 1));
+
+        // middle row
+        gameBoard.getDistricts().add(new BoardDistrict(0, 2, 5, 3));
+        gameBoard.getDistricts().add(new BoardDistrict(5, 2, 5, 3));
+        gameBoard.getDistricts().add(new BoardDistrict(0, 5, 5, 3));
+        gameBoard.getDistricts().add(new BoardDistrict(5, 5, 5, 3));
+
+        // bottom row
+        gameBoard.getDistricts().add(new BoardDistrict(0, 9, 1, 1));
+        gameBoard.getDistricts().add(new BoardDistrict(0, 8, 5, 2));
+        gameBoard.getDistricts().add(new BoardDistrict(5, 8, 5, 2));
+        gameBoard.getDistricts().add(new BoardDistrict(9, 9, 1, 1));
+
+        return this;
+    }
+
+
     // stations
 
     public BoardTemplates stationsFullyFillRandom() {
         for (int x = 0; x < gameBoard.getWidth(); x++) {
             for (int y = 0; y < gameBoard.getHeight(); y++) {
                 gameBoard.getStations().add(Station.randomType(x, y));
+            }
+        }
+        return this;
+    }
+
+    public BoardTemplates stationsFullyFillEvenlyDistributed() {
+        final int totalStations = gameBoard.getWidth() * gameBoard.getHeight();
+        final int stationsPerType = totalStations / (Station.StationType.values().length - 1);
+        final List<Station.StationType> distributeTypes = new ArrayList<>();
+        for (Station.StationType type : Station.StationType.values()) {
+            if (type == Station.StationType.JOKER) continue;
+            for (int i = 0; i < stationsPerType; i++) {
+                distributeTypes.add(type);
+            }
+        }
+        for (int x = 0; x < gameBoard.getWidth(); x++) {
+            for (int y = 0; y < gameBoard.getHeight(); y++) {
+                final Station.StationType type = distributeTypes.remove((int) (Math.random() * distributeTypes.size()));
+                gameBoard.getStations().add(Station.ofType(x, y, type));
             }
         }
         return this;
@@ -244,7 +284,13 @@ public class BoardTemplates {
                 break; // No more removable stations
             }
 
-            Station stationToRemove = candidates.get(random.nextInt(candidates.size()));
+            // Prioritize stations in districts with more stations
+            candidates.sort(Comparator.comparingInt(station -> {
+                BoardDistrict district = gameBoard.findDistrict(station);
+                return district == null ? 0 : -districtStations.get(district).size();
+            }));
+
+            Station stationToRemove = candidates.get(random.nextInt(Math.min(candidates.size(), 3)));
             removableStations.remove(stationToRemove);
             gameBoard.getStations().remove(stationToRemove);
 
@@ -302,74 +348,256 @@ public class BoardTemplates {
         return findNeighbors(station).size();
     }
 
-    public BoardTemplates stationRedistributeTypes(int maxIterations) {
-        Random random = new Random();
-        List<Station> stations = gameBoard.getStations();
-        List<Station> startingPositions = stations.stream()
+    public BoardTemplates stationStartingRedistributeTypes() {
+        final List<Station> startingPositions = gameBoard.getStations().stream()
                 .filter(station -> station.getStartingPosition() != -1)
                 .collect(Collectors.toList());
 
-        Map<Station, Set<Station.StationType>> reachabilityMap = new HashMap<>();
-        for (Station start : startingPositions) {
-            reachabilityMap.put(start, findReachableTypes(start));
-        }
+        for (Station startingPosition : startingPositions) {
+            // make sure that all starting positions can access at least 3/4 of the types by changing the type of the neighboring positions
+            final Set<Station> neighbors = findNeighbors(startingPosition);
+            final Set<Station.StationType> types = neighbors.stream()
+                    .map(Station::getType)
+                    .collect(Collectors.toSet());
+            final List<Station.StationType> missingTypes = new ArrayList<>(Arrays.asList(Station.StationType.values()));
+            missingTypes.remove(Station.StationType.JOKER);
+            missingTypes.removeAll(types);
 
-        for (int iteration = 0; iteration < maxIterations; iteration++) {
-            if (iteration % 100 == 0) {
-                log.info("stationRedistributeTypes iteration: {} / {}", iteration, maxIterations);
+            if (missingTypes.isEmpty()) {
+                continue;
             }
 
-            boolean allTypesReachableFromStart = startingPositions.stream()
-                    .allMatch(start -> reachabilityMap.get(start).containsAll(Arrays.asList(Station.StationType.values())));
-
-            if (allTypesReachableFromStart) {
-                break;
+            // find doubles
+            final Map<Station.StationType, Long> typeCounts = neighbors.stream()
+                    .collect(Collectors.groupingBy(Station::getType, Collectors.counting()));
+            final List<Station.StationType> doubles = typeCounts.entrySet().stream()
+                    .filter(entry -> entry.getValue() > 1)
+                    .map(Map.Entry::getKey)
+                    .collect(Collectors.toList());
+            if (doubles.isEmpty()) {
+                continue;
             }
 
-            for (Station start : startingPositions) {
-                Set<Station.StationType> reachableTypes = reachabilityMap.get(start);
-                if (!reachableTypes.containsAll(Arrays.asList(Station.StationType.values()))) {
-                    for (Station neighbor : findNeighbors(start)) {
-                        if (neighbor.getStartingPosition() == -1) {
-                            Station.StationType originalType = neighbor.getType();
-                            Station.StationType newType = Station.StationType.random();
-                            neighbor.setType(newType);
-
-                            Set<Station.StationType> newReachableTypes = findReachableTypes(start);
-                            if (newReachableTypes.containsAll(Arrays.asList(Station.StationType.values()))) {
-                                reachabilityMap.put(start, newReachableTypes);
-                            } else {
-                                neighbor.setType(originalType); // Revert if it doesn't improve reachability
-                            }
-                        }
-                    }
+            // retype one of the doubles to the missing types
+            Collections.shuffle(doubles);
+            Collections.shuffle(missingTypes);
+            for (Station.StationType missingType : missingTypes) {
+                if (doubles.isEmpty()) {
+                    log.warn("Failed to redistribute station types, not enough doubles");
+                    break;
                 }
+                final Station.StationType doubleType = doubles.remove(0);
+                neighbors.stream()
+                        .filter(neighbor -> neighbor.getType() == doubleType)
+                        .findFirst()
+                        .ifPresent(neighbor -> {
+                            log.info("Retyped station at {} to {}", neighbor, missingType);
+                            neighbor.setType(missingType);
+                        });
             }
         }
 
         return this;
     }
 
-    private Set<Station.StationType> findReachableTypes(Station startStation) {
-        Set<Station.StationType> reachableTypes = new HashSet<>();
-        Queue<Station> queue = new LinkedList<>();
-        Set<Station> visited = new HashSet<>();
+    // connections
 
-        queue.add(startStation);
-        visited.add(startStation);
+    public BoardTemplates connectionsConnectNeighbors() {
+        // connect stations with connections, compute neighbors
+        for (Station station : gameBoard.getStations()) {
+            for (Station neighbor : findNeighbors(station)) {
+                gameBoard.getConnections().add(new RailwayConnection(station, neighbor));
+            }
+        }
+        return this;
+    }
 
-        while (!queue.isEmpty()) {
-            Station current = queue.poll();
-            reachableTypes.add(current.getType());
+    public BoardTemplates connectionsPruneMaxDistance(int maxDistance) {
+        gameBoard.getConnections().removeIf(connection -> {
+            final int distance = (int) Math.sqrt(Math.pow(connection.getX1() - connection.getX2(), 2) + Math.pow(connection.getY1() - connection.getY2(), 2));
+            return distance > maxDistance;
+        });
+        return this;
+    }
 
-            for (Station neighbor : findNeighbors(current)) {
-                if (!visited.contains(neighbor)) {
-                    visited.add(neighbor);
-                    queue.add(neighbor);
+    // intersections
+
+    public BoardTemplates intersectionsAddRandomPerDistrict(int minStationCount) {
+        final Map<BoardDistrict, Set<Station>> districtStations = gameBoard.computeStationsPerDistrict();
+        final List<BoardDistrict> districts = districtStations.entrySet().stream()
+                .filter(entry -> entry.getValue().size() >= minStationCount)
+                .map(Map.Entry::getKey)
+                .collect(Collectors.toList());
+
+        final Set<RailwayConnection> ignoreConnections = new HashSet<>();
+
+        for (BoardDistrict district : districts) {
+            final List<TmpIntersection> districtIntersections = gameBoard.findTrueConnectionIntersectionsInDistrict(district);
+            if (districtIntersections.isEmpty()) {
+                continue;
+            }
+
+            // check if any of the intersections are already in use
+            districtIntersections.removeIf(districtIntersection -> {
+                for (RailwayConnection checkConnection : districtIntersection.getConnections()) {
+                    if (ignoreConnections.contains(checkConnection)) {
+                        return true;
+                    }
                 }
+                return false;
+            });
+
+            if (districtIntersections.isEmpty()) {
+                log.warn("No valid intersections found in district {}", district);
+                continue;
+            }
+
+            // pick random intersection
+            final TmpIntersection intersection = districtIntersections.get((int) (Math.random() * districtIntersections.size()));
+            final RailwayConnectionIntersection properIntersection = new RailwayConnectionIntersection(intersection.getX(), intersection.getY());
+            // pick two random directions from the intersection
+            final List<RailwayConnectionIntersection.Direction> directions = new ArrayList<>(intersection.getDirections());
+            Collections.shuffle(directions);
+            properIntersection.setTop(directions.get(0));
+            properIntersection.setBottom(directions.get(1));
+
+            ignoreConnections.addAll(intersection.getConnections());
+
+            gameBoard.getIntersections().add(properIntersection);
+        }
+
+        return this;
+    }
+
+    // connections, clear those that hit invalid intersections
+    public BoardTemplates connectionsPruneInvalidIntersections() {
+        gameBoard.getConnections().removeIf(connection -> {
+            for (RailwayConnectionIntersection intersection : gameBoard.getIntersections()) {
+                if (intersection.intersects(connection)) {
+                    // candidate for removal, now check if direction of connection is valid
+                    final RailwayConnectionIntersection.Direction direction = connection.getDirection();
+                    if (direction == null || !intersection.containsDirection(direction)) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        });
+        return this;
+    }
+
+    // river
+
+    public BoardTemplates riverGenerateRandomly(int attempts, int targetLengthAddition) {
+        Random random = new Random();
+
+        final int targetLength = (gameBoard.getWidth() + gameBoard.getHeight()) / 2 + targetLengthAddition;
+        int bestScore = Integer.MIN_VALUE;
+        RiverLayout bestRiver = null;
+
+        for (int a = 0; a < attempts; a++) {
+            RiverLayout riverLayout = new RiverLayout();
+
+            final float padding = 1.0f;
+
+            // start anywhere around the border
+            RiverLayout.Direction riverDirection = RiverLayout.Direction.values()[(int) (Math.random() * 4)];
+            float x = -padding, y = -padding;
+            final float randomX = 3 + random.nextInt(gameBoard.getWidth() - 3);
+            final float randomY = 3 + random.nextInt(gameBoard.getHeight() - 3);
+            if (riverDirection == RiverLayout.Direction.DOWN) {
+                x = randomX;
+            } else if (riverDirection == RiverLayout.Direction.UP) {
+                x = randomX;
+                y = gameBoard.getHeight() + padding;
+            } else if (riverDirection == RiverLayout.Direction.LEFT) {
+                x = gameBoard.getWidth() + padding;
+                y = randomY;
+            } else if (riverDirection == RiverLayout.Direction.RIGHT) {
+                y = randomY;
+            }
+            x += 0.5f;
+            y += 0.5f;
+
+            riverLayout.getPath().add(new RiverLayout.Point(x, y));
+
+            x += riverDirection.getDx();
+            y += riverDirection.getDy();
+            riverLayout.getPath().add(new RiverLayout.Point(x, y));
+
+            for (int i = 0; i < 40; i++) {
+                final RiverLayout.Direction previousDirection = riverDirection;
+                riverDirection = riverDirection.divergeChance(0.4f);
+
+                if (!previousDirection.isDiagonal() && riverDirection.isDiagonal()) {
+                    x += previousDirection.getDx() * 0.5f;
+                    y += previousDirection.getDy() * 0.5f;
+                    riverLayout.getPath().add(new RiverLayout.Point(x, y));
+                }
+
+                if (previousDirection.isDiagonal() && !riverDirection.isDiagonal()) {
+                    boolean isNextHalfStepOffGridX = Math.abs((x + riverDirection.getDx() * 0.5f) % 1) > 0.1;
+                    boolean isNextHalfStepOffGridY = Math.abs((y + riverDirection.getDy() * 0.5f) % 1) > 0.1;
+
+                    if (isNextHalfStepOffGridX && isNextHalfStepOffGridY) {
+                        x += riverDirection.getDx() * 0.5f;
+                        y += riverDirection.getDy() * 0.5f;
+                        riverLayout.getPath().add(new RiverLayout.Point(x, y));
+                    } else {
+                        x += previousDirection.getDx() * 0.5f;
+                        y += previousDirection.getDy() * 0.5f;
+                        riverLayout.getPath().add(new RiverLayout.Point(x, y));
+
+                        x += riverDirection.getDx() * 0.5f;
+                        y += riverDirection.getDy() * 0.5f;
+                        riverLayout.getPath().add(new RiverLayout.Point(x, y));
+                    }
+                }
+
+
+                if (riverDirection.isDiagonal()) {
+                    x += riverDirection.getDx() * 0.5f;
+                    y += riverDirection.getDy() * 0.5f;
+                } else {
+                    x += riverDirection.getDx();
+                    y += riverDirection.getDy();
+                }
+
+                riverLayout.getPath().add(new RiverLayout.Point(x, y));
+
+                // check if the river is out of bounds
+                if (x < 0 || x >= gameBoard.getWidth() || y < 0 || y >= gameBoard.getHeight()) {
+                    break;
+                }
+            }
+
+            // score calculation
+            int score = 0;
+
+            // add points based on how close the river length is to the target length
+            int lengthDiff = (int) Math.pow(Math.abs(riverLayout.pathLength() - targetLength), 2);
+            score += 100 - lengthDiff;
+
+            // add points based on how many districts are visited
+            Set<BoardDistrict> visitedDistricts = new HashSet<>();
+            for (RiverLayout.Point point : riverLayout.getPath()) {
+                final BoardDistrict district = gameBoard.findDistrict((int) point.getX(), (int) point.getY());
+                if (district != null) {
+                    visitedDistricts.add(district);
+                }
+            }
+            score += visitedDistricts.size() * 10;
+
+            if (bestRiver == null || score > bestScore) {
+                bestScore = score;
+                bestRiver = riverLayout;
             }
         }
 
-        return reachableTypes;
+        log.info("Generated river layout of length [{} - {}]", bestRiver.getPath().size(),  bestRiver.pathLength());
+
+        gameBoard.setRiverLayout(bestRiver);
+
+        return this;
     }
 }

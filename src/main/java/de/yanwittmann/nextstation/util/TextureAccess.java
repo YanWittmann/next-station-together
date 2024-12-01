@@ -31,15 +31,53 @@ public class TextureAccess {
             return new TextureData(path + "/" + overlay.path, overlayImages(image, overlay.image));
         }
 
-        public TextureData tint(Color tintColor, float tintOpacity) {
+        public TextureData tintNonTransparent(Color tintColor, float tintOpacity) {
+            final BufferedImage tintedImage = new BufferedImage(image.getWidth(), image.getHeight(), BufferedImage.TYPE_INT_ARGB);
+            final Graphics2D graphics = tintedImage.createGraphics();
+            graphics.drawImage(image, 0, 0, null);
+            for (int x = 0; x < image.getWidth(); x++) {
+                for (int y = 0; y < image.getHeight(); y++) {
+                    final int color = image.getRGB(x, y);
+                    if ((color & 0xFF000000) != 0) {
+                        graphics.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, tintOpacity));
+                        graphics.setColor(tintColor);
+                        graphics.fillRect(x, y, 1, 1);
+                    }
+                }
+            }
+            graphics.dispose();
+            return new TextureData(path + "/tinted-" +
+                    tintColor.getRed() + "-" + tintColor.getGreen() + "-" + tintColor.getBlue() + "-" + tintOpacity,
+                    tintedImage);
+        }
+
+        public TextureData tintOnlyColorWithThreshold(Color tintColor, float tintOpacity, Color refColor, int threshold) {
             final BufferedImage tintedImage = new BufferedImage(image.getWidth(), image.getHeight(), BufferedImage.TYPE_INT_ARGB);
             final Graphics2D graphics = tintedImage.createGraphics();
             graphics.drawImage(image, 0, 0, null);
             graphics.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, tintOpacity));
             graphics.setColor(tintColor);
-            graphics.fillRect(0, 0, image.getWidth(), image.getHeight());
+
+            for (int x = 0; x < image.getWidth(); x++) {
+                for (int y = 0; y < image.getHeight(); y++) {
+                    final int color = image.getRGB(x, y);
+                    final int refRed = refColor.getRed();
+                    final int refGreen = refColor.getGreen();
+                    final int refBlue = refColor.getBlue();
+                    final int red = (color >> 16) & 0xFF;
+                    final int green = (color >> 8) & 0xFF;
+                    final int blue = color & 0xFF;
+
+                    if (Math.abs(red - refRed) <= threshold && Math.abs(green - refGreen) <= threshold && Math.abs(blue - refBlue) <= threshold) {
+                        graphics.fillRect(x, y, 1, 1);
+                    }
+                }
+            }
             graphics.dispose();
-            return new TextureData(path + "/tinted", tintedImage);
+            return new TextureData(path + "/tinted-" +
+                    tintColor.getRed() + "-" + tintColor.getGreen() + "-" + tintColor.getBlue() + "-" + tintOpacity + "-" +
+                    refColor.getRed() + "-" + refColor.getGreen() + "-" + refColor.getBlue() + "-" + threshold,
+                    tintedImage);
         }
 
         public void write(File dir) throws IOException {
@@ -81,6 +119,8 @@ public class TextureAccess {
         STATION_SHAPE_SQUARE(TEXTURE_DIR + BOARD_DIR + "station_shape_square.png"),
         STATION_SHAPE_PENTAGON(TEXTURE_DIR + BOARD_DIR + "station_shape_pentagon.png"),
         STATION_SHAPE_JOKER(TEXTURE_DIR + BOARD_DIR + "station_shape_joker.png"),
+
+        CONNECTION_INTERSECTION(TEXTURE_DIR + BOARD_DIR + "crossing_"),
         ;
 
         private final String path;
