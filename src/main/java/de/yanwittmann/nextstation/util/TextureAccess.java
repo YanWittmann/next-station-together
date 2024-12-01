@@ -16,6 +16,7 @@ public class TextureAccess {
 
     public final static String TEXTURE_DIR = "/board/texture/";
     public final static String BOARD_DIR = "board/";
+    public final static String SCORE_DIR = "score/";
 
     @Data
     public static class TextureData {
@@ -29,6 +30,11 @@ public class TextureAccess {
 
         public TextureData overlay(TextureData overlay) {
             return new TextureData(path + "/" + overlay.path, overlayImages(image, overlay.image));
+        }
+
+        public TextureData overlay(TextureData overlay, int x, int y, int width, int height) {
+            final BufferedImage scaledOverlay = scaleImage(overlay.image, width, height);
+            return new TextureData(path + "/" + overlay.path, overlayImages(image, scaledOverlay, x, y));
         }
 
         public TextureData tintNonTransparent(Color tintColor, float tintOpacity) {
@@ -80,6 +86,31 @@ public class TextureAccess {
                     tintedImage);
         }
 
+        public TextureData addText(String str, Font font, Color color, float xp, float yp, String alignment) {
+            BufferedImage newImage = new BufferedImage(image.getWidth(), image.getHeight(), BufferedImage.TYPE_INT_ARGB);
+            Graphics2D g = newImage.createGraphics();
+            g.drawImage(image, 0, 0, null);
+            g.setFont(font);
+            g.setColor(color);
+            FontMetrics metrics = g.getFontMetrics(font);
+            int x = (int) (xp * image.getWidth());
+            int y = (int) (yp * image.getHeight());
+
+            if ("center".equalsIgnoreCase(alignment)) {
+                x -= metrics.stringWidth(str) / 2;
+                y += metrics.getAscent() / 2;
+            } else if ("right".equalsIgnoreCase(alignment)) {
+                x -= metrics.stringWidth(str);
+                y += metrics.getAscent() / 2;
+            } else if ("left".equalsIgnoreCase(alignment)) {
+                y += metrics.getAscent() / 2;
+            }
+
+            g.drawString(str, x, y);
+            g.dispose();
+            return new TextureData(path + "/text-" + str, newImage);
+        }
+
         public void write(File dir) throws IOException {
             final File output = new File(dir, fileHash() + ".png");
             output.getParentFile().mkdirs();
@@ -107,6 +138,20 @@ public class TextureAccess {
                 write(optProvider.getTexture(), dir);
             }
         }
+
+        public TextureData pad(Color color, int top, int right, int left, int bottom) {
+            final BufferedImage paddedImage = new BufferedImage(image.getWidth() + left + right, image.getHeight() + top + bottom, BufferedImage.TYPE_INT_ARGB);
+            final Graphics2D graphics = paddedImage.createGraphics();
+            graphics.setColor(color);
+            graphics.fillRect(0, 0, paddedImage.getWidth(), paddedImage.getHeight());
+            graphics.drawImage(image, left, top, null);
+            graphics.dispose();
+            return new TextureData(path + "/padded-" + top + "-" + right + "-" + left + "-" + bottom, paddedImage);
+        }
+
+        public TextureData scale(int newWidth, int newHeight) {
+            return new TextureData(path + "/scaled-" + newWidth + "-" + newHeight, scaleImage(image, newWidth, newHeight));
+        }
     }
 
     public enum TexturesIndex {
@@ -121,6 +166,12 @@ public class TextureAccess {
         STATION_SHAPE_JOKER(TEXTURE_DIR + BOARD_DIR + "station_shape_joker.png"),
 
         CONNECTION_INTERSECTION(TEXTURE_DIR + BOARD_DIR + "crossing_"),
+
+        SCORE_DISTRICTS_COUNT(TEXTURE_DIR + SCORE_DIR + "districts.png"),
+        SCORE_MAX_STATIONS_IN_DISTRICT(TEXTURE_DIR + SCORE_DIR + "max_stations_in_district.png"),
+        SCORE_RIVER_CROSSINGS(TEXTURE_DIR + SCORE_DIR + "river_crossings.png"),
+        SCORE_CIRCLE(TEXTURE_DIR + SCORE_DIR + "circle.png"),
+        SCORE_INTERCHANGE_STATIONS(TEXTURE_DIR + SCORE_DIR + "interchange_"),
         ;
 
         private final String path;

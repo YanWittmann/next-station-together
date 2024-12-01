@@ -33,6 +33,7 @@ class GameBoardTest {
                 .intersectionsAddRandomPerDistrict(3)
                 .connectionsPruneInvalidIntersections()
                 .riverGenerateRandomly(100, 5)
+                .scoreLondon()
                 .getBoard();
 
 

@@ -17,11 +17,13 @@ class GameBoard {
     }
 
     setupCanvas() {
+        // Set canvas size based on container
         const container = this.canvas.parentElement;
         const size = container.clientWidth;
         this.canvas.width = size;
         this.canvas.height = size;
 
+        // Scale everything based on container size
         this.scale = size / (this.STATION_SIZE * 10);
         this.ctx.scale(this.scale, this.scale);
     }
@@ -62,6 +64,7 @@ class GameBoard {
             }));
             await this.preloadImages();
             this.draw();
+            this.populateScoreTable();
         } catch (error) {
             console.error('Error loading board data:', error);
         }
@@ -90,20 +93,30 @@ class GameBoard {
     draw() {
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
+        // Draw river
         this.drawRiver();
+
+        // Draw districts
         this.drawDistricts();
+
+        // Draw connections
         this.drawPrebakedConnections();
         this.drawUserConnections();
+
+        // Draw stations
         this.drawStations();
+
+        // Draw intersections
         this.drawIntersections();
 
+        // Draw current dragging connection if any
         if (this.dragStart && this.currentConnection) {
             this.drawConnection(
                 this.dragStart.x,
                 this.dragStart.y,
                 this.currentConnection.x,
                 this.currentConnection.y,
-                this.selectedColor
+                this.getConnectionColor(this.dragStart.station)
             );
         }
     }
@@ -211,6 +224,16 @@ class GameBoard {
         });
     }
 
+    getConnectionColor(station) {
+        const colors = [
+            'var(--connection-color-0)',
+            'var(--connection-color-1)',
+            'var(--connection-color-2)',
+            'var(--connection-color-3)'
+        ];
+        return colors[station.startingPosition] || '#ededed';
+    }
+
     getStationAt(x, y) {
         const gridX = Math.floor(x / (this.STATION_SIZE * this.scale));
         const gridY = Math.floor(y / (this.STATION_SIZE * this.scale));
@@ -222,19 +245,25 @@ class GameBoard {
 
     handleMouseDown(e) {
         const rect = this.canvas.getBoundingClientRect();
-        const x = (e.clientX - rect.left) / this.scale;
-        const y = (e.clientY - rect.top) / this.scale;
+        const mouseX = (e.clientX - rect.left) / this.scale;
+        const mouseY = (e.clientY - rect.top) / this.scale;
 
-        const station = this.getStationAt(x, y);
+        const gridX = Math.floor(mouseX / this.STATION_SIZE);
+        const gridY = Math.floor(mouseY / this.STATION_SIZE);
+
+        const station = this.boardData.stations.find(
+            station => station.x === gridX && station.y === gridY
+        );
+
         if (station) {
             this.dragStart = {
-                x: station.x,
-                y: station.y,
+                x: gridX,
+                y: gridY,
                 station: station
             };
             this.currentConnection = {
-                x: station.x,
-                y: station.y
+                x: gridX,
+                y: gridY
             };
         }
     }
@@ -243,13 +272,21 @@ class GameBoard {
         if (!this.dragStart) return;
 
         const rect = this.canvas.getBoundingClientRect();
-        const x = (e.clientX - rect.left) / this.scale;
-        const y = (e.clientY - rect.top) / this.scale;
+        const mouseX = (e.clientX - rect.left) / this.scale;
+        const mouseY = (e.clientY - rect.top) / this.scale;
 
-        const gridX = Math.floor(x / this.STATION_SIZE);
-        const gridY = Math.floor(y / this.STATION_SIZE);
+        const gridX = Math.floor(mouseX / this.STATION_SIZE);
+        const gridY = Math.floor(mouseY / this.STATION_SIZE);
 
-        this.currentConnection = { x: gridX, y: gridY };
+        // Only update if we're over a valid station
+        const targetStation = this.boardData.stations.find(
+            station => station.x === gridX && station.y === gridY
+        );
+
+        if (targetStation) {
+            this.currentConnection = { x: gridX, y: gridY };
+        }
+
         this.draw();
     }
 
@@ -260,9 +297,15 @@ class GameBoard {
             return;
         }
 
-        const endStation = this.getStationAt(
-            this.currentConnection.x * this.STATION_SIZE,
-            this.currentConnection.y * this.STATION_SIZE
+        const rect = this.canvas.getBoundingClientRect();
+        const mouseX = (e.clientX - rect.left) / this.scale;
+        const mouseY = (e.clientY - rect.top) / this.scale;
+
+        const gridX = Math.floor(mouseX / this.STATION_SIZE);
+        const gridY = Math.floor(mouseY / this.STATION_SIZE);
+
+        const endStation = this.boardData.stations.find(
+            station => station.x === gridX && station.y === gridY
         );
 
         if (endStation && endStation !== this.dragStart.station) {
@@ -294,6 +337,128 @@ class GameBoard {
             this.draw();
         }
     }
+
+    populateScoreTable() {
+        const scoreTable = document.querySelector('.score-table');
+        scoreTable.innerHTML = ''; // Clear existing content
+
+        // Turn-wise score contributors
+        const turnWiseContributors = [
+            this.boardData.turnWiseScoreContributorA,
+            this.boardData.turnWiseScoreContributorB,
+            this.boardData.turnWiseScoreContributorC
+        ];
+
+        // End-game score contributors
+        const endGameContributors = [
+            this.boardData.endGameScoreContributorA,
+            this.boardData.endGameScoreContributorB,
+            this.boardData.endGameScoreContributorC
+        ];
+
+        // Create a 12x8 array to represent the table
+        const tableData = Array(10).fill().map(() => Array(15).fill(''));
+
+        // Populate the array with cell contents
+        /*for (let i = 0; i < 8; i++) {
+            if (i < 3) {
+                const contributor = turnWiseContributors[i];
+                tableData[i][0] = `<td><img src="http://localhost:8000/img/${contributor.texture}.png" alt="${contributor.type}" class="score-icon"></td>`;
+                // tableData[i][1] = `<td>${i === 2 ? '×' + contributor.multiplier : (i === 1 ? '+' : '×')}</td>`;
+                for (let j = 1; j < 5; j++) {
+                    tableData[i][j] = '<td><input type="number" class="score-input"></td>';
+                }
+            } else if (i === 3) {
+                tableData[i][0] = '<td colspan="2">=</td>';
+                for (let j = 1; j < 5; j++) {
+                    tableData[i][j] = '<td class="sum-cell"></td>';
+                }
+            }
+
+            tableData[i][6] = '<td class="separator"></td>';
+
+            if (i < 3) {
+                const contributor = endGameContributors[i];
+                tableData[i][7] = `<td><img src="http://localhost:8000/img/${contributor.texture}.png" alt="${contributor.type}" class="score-icon"></td>`;
+                tableData[i][8] = `<td>×${contributor.multiplier}</td>`;
+                tableData[i][9] = '<td><input type="number" class="score-input"></td>';
+            } else if (i === 3) {
+                tableData[i][7] = '<td colspan="2">=</td>';
+                tableData[i][9] = '<td class="sum-cell"></td>';
+            }
+
+            if (i === 0) {
+                tableData[i][10] = `
+                    <td rowspan="3" class="bonus-section">
+                        <div class="bonus-icons">
+                            <img src="placeholder1.png" alt="Bonus 1" class="score-icon">
+                            <img src="placeholder2.png" alt="Bonus 2" class="score-icon">
+                            <img src="placeholder3.png" alt="Bonus 3" class="score-icon">
+                        </div>
+                    </td>
+                `;
+            }
+        }*/
+        function createTurnWiseContributorRow(rowIndex, contributorIndex, symbol) {
+            tableData[rowIndex][0] = `<td class="regular-height"><img src="http://localhost:8000/img/${turnWiseContributors[contributorIndex].texture}.png" alt="${turnWiseContributors[contributorIndex].type}" class="score-icon"></td>`;
+            tableData[rowIndex][1] = '<td class="regular-height"><input type="number" class="score-input"></td>';
+            tableData[rowIndex][2] = '<td class="regular-height score-table-turnwise-border"></td>';
+            tableData[rowIndex][3] = '<td class="regular-height"><input type="number" class="score-input"></td>';
+            tableData[rowIndex][4] = '<td class="regular-height score-table-turnwise-border"></td>';
+            tableData[rowIndex][5] = '<td class="regular-height"><input type="number" class="score-input"></td>';
+            tableData[rowIndex][6] = '<td class="regular-height score-table-turnwise-border"></td>';
+            tableData[rowIndex][7] = '<td class="regular-height"><input type="number" class="score-input"></td>';
+            tableData[rowIndex][8] = '<td class="regular-height score-table-turnwise-border"></td>';
+
+            tableData[rowIndex + 1][1] = `<td class="score-table-operation-symbol">${symbol}</td>`;
+            tableData[rowIndex + 1][2] = `<td class="score-table-turnwise-border"></td>`;
+            tableData[rowIndex + 1][3] = `<td class="score-table-operation-symbol">${symbol}</td>`;
+            tableData[rowIndex + 1][4] = `<td class="score-table-turnwise-border"></td>`;
+            tableData[rowIndex + 1][5] = `<td class="score-table-operation-symbol">${symbol}</td`;
+            tableData[rowIndex + 1][6] = `<td class="score-table-turnwise-border"></td>`;
+            tableData[rowIndex + 1][7] = `<td class="score-table-operation-symbol">${symbol}</td>`;
+        }
+
+        createTurnWiseContributorRow(0, 0, "×");
+        createTurnWiseContributorRow(2, 1, "+");
+        createTurnWiseContributorRow(4, 2, "=");
+
+        // sum cells
+        tableData[6][1] = '<td class="regular-height"><input type="number" class="score-input"></td>';
+        tableData[6][2] = '<td class="regular-height width-none score-table-operation-symbol">+</td>';
+        tableData[6][3] = '<td class="regular-height"><input type="number" class="score-input"></td>';
+        tableData[6][4] = '<td class="regular-height width-none score-table-operation-symbol">+</td>';
+        tableData[6][5] = '<td class="regular-height"><input type="number" class="score-input"></td>';
+        tableData[6][6] = '<td class="regular-height width-none score-table-operation-symbol">+</td>';
+        tableData[6][7] = '<td class="regular-height"><input type="number" class="score-input"></td>';
+        tableData[6][8] = '<td class="regular-height width-none score-table-operation-symbol">=</td>';
+        tableData[6][9] = '<td class="regular-height"><input type="number" class="score-input"></td>';
+
+        function createEndGameContributorRow(rowIndex, contributorIndex) {
+            tableData[rowIndex][9] = `<td class="regular-height"><img src="http://localhost:8000/img/${endGameContributors[contributorIndex].texture}.png" alt="${endGameContributors[contributorIndex].type}" class="score-icon"></td>`;
+            tableData[rowIndex][10] = '<td class="regular-height">×</td>';
+            tableData[rowIndex][11] = '<td class="regular-height"><input type="number" class="score-input"></td>';
+            tableData[rowIndex][12] = '<td class="regular-height">=</td>';
+            tableData[rowIndex][13] = '<td class="regular-height"><input type="number" class="score-input"></td>';
+        }
+
+        createEndGameContributorRow(0, 0);
+        createEndGameContributorRow(2, 1);
+        createEndGameContributorRow(4, 2);
+
+
+        // Construct the table using the array
+        for (let i = 0; i < tableData.length; i++) {
+            const row = scoreTable.insertRow();
+            for (let j = 0; j < tableData[i].length; j++) {
+                if (tableData[i][j]) {
+                    row.innerHTML += tableData[i][j];
+                } else {
+                    row.insertCell();
+                }
+            }
+        }
+    }
 }
 
 // Initialize the game when the DOM is loaded
@@ -301,3 +466,4 @@ document.addEventListener('DOMContentLoaded', () => {
     const canvas = document.getElementById('gameCanvas');
     new GameBoard(canvas);
 });
+

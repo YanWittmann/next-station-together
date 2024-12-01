@@ -25,6 +25,7 @@ public class TextureProviderAdapterFactory implements TypeAdapterFactory {
                 if (value instanceof TextureProvider) {
                     final TextureProvider textureProvider = (TextureProvider) value;
                     jsonObject.addProperty("texture", textureProvider.getTextureHash());
+                    jsonObject.addProperty("texturePath", textureProvider.getTexture().getPath());
                 }
 
                 gson.toJson(jsonObject, out);

@@ -2,6 +2,8 @@ package de.yanwittmann.nextstation.setup;
 
 import de.yanwittmann.nextstation.model.GameBoard;
 import de.yanwittmann.nextstation.model.board.*;
+import de.yanwittmann.nextstation.model.score.*;
+import de.yanwittmann.nextstation.util.GeneralUtil;
 import de.yanwittmann.nextstation.util.TmpIntersection;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -10,6 +12,8 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+
+import static de.yanwittmann.nextstation.util.GeneralUtil.with;
 
 @Slf4j
 public class BoardTemplates {
@@ -598,6 +602,19 @@ public class BoardTemplates {
 
         gameBoard.setRiverLayout(bestRiver);
 
+        return this;
+    }
+
+    // board scoring
+
+    public BoardTemplates scoreLondon() {
+        gameBoard.setTurnWiseScoreContributorA(new ScoreDistrictsVisited());
+        gameBoard.setTurnWiseScoreContributorB(new ScoreMaxStationsInDistrict());
+        gameBoard.setTurnWiseScoreContributorC(with(new ScoreRiverCrossings(), i -> i.setMultiplier(2)));
+
+        gameBoard.setEndGameScoreContributorA(with(new ScoreInterchangeStations(), i -> i.setAmountInterchanges(2), i -> i.setMultiplier(2)));
+        gameBoard.setEndGameScoreContributorB(with(new ScoreInterchangeStations(), i -> i.setAmountInterchanges(3), i -> i.setMultiplier(5)));
+        gameBoard.setEndGameScoreContributorC(with(new ScoreInterchangeStations(), i -> i.setAmountInterchanges(4), i -> i.setMultiplier(9)));
         return this;
     }
 }
