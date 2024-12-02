@@ -152,6 +152,71 @@ public class TextureAccess {
         public TextureData scale(int newWidth, int newHeight) {
             return new TextureData(path + "/scaled-" + newWidth + "-" + newHeight, scaleImage(image, newWidth, newHeight));
         }
+
+        public TextureData cropToVisibleArea() {
+            // find first pixel top, left, right, bottom and crop to that area
+            int top = 0;
+            int left = 0;
+            int right = image.getWidth();
+            int bottom = image.getHeight();
+            for (int y = 0; y < image.getHeight(); y++) {
+                boolean hasContent = false;
+                for (int x = 0; x < image.getWidth(); x++) {
+                    if ((image.getRGB(x, y) & 0xFF000000) != 0) {
+                        hasContent = true;
+                        break;
+                    }
+                }
+                if (hasContent) {
+                    top = y;
+                    break;
+                }
+            }
+            for (int y = image.getHeight() - 1; y >= 0; y--) {
+                boolean hasContent = false;
+                for (int x = 0; x < image.getWidth(); x++) {
+                    if ((image.getRGB(x, y) & 0xFF000000) != 0) {
+                        hasContent = true;
+                        break;
+                    }
+                }
+                if (hasContent) {
+                    bottom = y;
+                    break;
+                }
+            }
+            for (int x = 0; x < image.getWidth(); x++) {
+                boolean hasContent = false;
+                for (int y = 0; y < image.getHeight(); y++) {
+                    if ((image.getRGB(x, y) & 0xFF000000) != 0) {
+                        hasContent = true;
+                        break;
+                    }
+                }
+                if (hasContent) {
+                    left = x;
+                    break;
+                }
+            }
+            for (int x = image.getWidth() - 1; x >= 0; x--) {
+                boolean hasContent = false;
+                for (int y = 0; y < image.getHeight(); y++) {
+                    if ((image.getRGB(x, y) & 0xFF000000) != 0) {
+                        hasContent = true;
+                        break;
+                    }
+                }
+                if (hasContent) {
+                    right = x;
+                    break;
+                }
+            }
+            final BufferedImage croppedImage = new BufferedImage(right - left, bottom - top, BufferedImage.TYPE_INT_ARGB);
+            final Graphics2D graphics = croppedImage.createGraphics();
+            graphics.drawImage(image, 0, 0, right - left, bottom - top, left, top, right, bottom, null);
+            graphics.dispose();
+            return new TextureData(path + "/cropped", croppedImage);
+        }
     }
 
     public enum TexturesIndex {
@@ -164,8 +229,10 @@ public class TextureAccess {
         STATION_SHAPE_SQUARE(TEXTURE_DIR + BOARD_DIR + "station_shape_square.png"),
         STATION_SHAPE_PENTAGON(TEXTURE_DIR + BOARD_DIR + "station_shape_pentagon.png"),
         STATION_SHAPE_JOKER(TEXTURE_DIR + BOARD_DIR + "station_shape_joker.png"),
+        STATION_SHAPE_MONUMENT(TEXTURE_DIR + BOARD_DIR + "station_shape_monument.png"),
 
         CONNECTION_INTERSECTION(TEXTURE_DIR + BOARD_DIR + "crossing_"),
+        CONNECTION_WALKED_INTERSECTION(TEXTURE_DIR + BOARD_DIR + "crossing_walked_"),
 
         SCORE_DISTRICTS_COUNT(TEXTURE_DIR + SCORE_DIR + "districts.png"),
         SCORE_MAX_STATIONS_IN_DISTRICT(TEXTURE_DIR + SCORE_DIR + "max_stations_in_district.png"),

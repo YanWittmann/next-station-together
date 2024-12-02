@@ -3,6 +3,8 @@ package de.yanwittmann.nextstation.setup;
 import de.yanwittmann.nextstation.model.GameBoard;
 import de.yanwittmann.nextstation.model.board.*;
 import de.yanwittmann.nextstation.model.score.*;
+import de.yanwittmann.nextstation.model.score.progress.ProgressScoreCompoundContributor;
+import de.yanwittmann.nextstation.model.score.progress.ProgressScoreMonuments;
 import de.yanwittmann.nextstation.util.TmpIntersection;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -528,7 +530,8 @@ public class BoardTemplates {
             y += riverDirection.getDy();
             riverLayout.getPath().add(new RiverLayout.Point(x, y));
 
-            for (int i = 0; i < 40; i++) {
+            int maxLen = 40;
+            for (int i = 0; i < maxLen; i++) {
                 final RiverLayout.Direction previousDirection = riverDirection;
                 riverDirection = riverDirection.divergeChance(0.4f);
 
@@ -569,8 +572,9 @@ public class BoardTemplates {
                 riverLayout.getPath().add(new RiverLayout.Point(x, y));
 
                 // check if the river is out of bounds
-                if (x < 0 || x >= gameBoard.getWidth() || y < 0 || y >= gameBoard.getHeight()) {
-                    break;
+                if ((x < 0 || x >= gameBoard.getWidth() || y < 0 || y >= gameBoard.getHeight()) && i < maxLen - 3) {
+                    // like 3 more to be safe
+                    i = maxLen - 3;
                 }
             }
 
@@ -604,6 +608,24 @@ public class BoardTemplates {
         gameBoard.setEndGameScoreContributorA(with(new ScoreInterchangeStations(), i -> i.setAmountInterchanges(2), i -> i.setMultiplier(2)));
         gameBoard.setEndGameScoreContributorB(with(new ScoreInterchangeStations(), i -> i.setAmountInterchanges(3), i -> i.setMultiplier(5)));
         gameBoard.setEndGameScoreContributorC(with(new ScoreInterchangeStations(), i -> i.setAmountInterchanges(4), i -> i.setMultiplier(9)));
+
+        gameBoard.setProgressScoreContributor(new ProgressScoreMonuments());
+        return this;
+    }
+
+    public BoardTemplates scoreParis() {
+        gameBoard.setTurnWiseScoreContributorA(new ScoreDistrictsVisited());
+        gameBoard.setTurnWiseScoreContributorB(new ScoreMaxStationsInDistrict());
+        gameBoard.setTurnWiseScoreContributorC(with(new ScoreMonumentsVisited(), i -> i.setMultiplier(2)));
+
+        gameBoard.setEndGameScoreContributorA(with(new ScoreInterchangeStations(), i -> i.setAmountInterchanges(2), i -> i.setMultiplier(2)));
+        gameBoard.setEndGameScoreContributorB(with(new ScoreInterchangeStations(), i -> i.setAmountInterchanges(3), i -> i.setMultiplier(5)));
+        gameBoard.setEndGameScoreContributorC(with(new ScoreInterchangeStations(), i -> i.setAmountInterchanges(4), i -> i.setMultiplier(9)));
+
+        gameBoard.setProgressScoreContributor(with(new ProgressScoreCompoundContributor(),
+                i-> i.setScoreContributorA(with(new ScoreIntersections(), j -> j.setMultiplier(2), j -> j.setUsedPaths(1))),
+                i-> i.setScoreContributorB(with(new ScoreIntersections(), j -> j.setMultiplier(6), j -> j.setUsedPaths(2)))
+        ));
         return this;
     }
 }

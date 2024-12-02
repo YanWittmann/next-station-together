@@ -141,7 +141,7 @@ class GameBoard {
                 this.dragStart.y,
                 this.currentConnection.x,
                 this.currentConnection.y,
-                this.getConnectionColor(this.selectedColor)
+                this.selectedColor
             );
         }
     }
@@ -249,14 +249,14 @@ class GameBoard {
         });
     }
 
-    getConnectionColor(station) {
+    getConnectionColor(startingPosition) {
         const colors = [
             'var(--connection-color-0)',
             'var(--connection-color-1)',
             'var(--connection-color-2)',
             'var(--connection-color-3)'
         ];
-        return colors[station.startingPosition] || '#ededed';
+        return colors[startingPosition] || '#ededed';
     }
 
     getStationAt(x, y) {
@@ -454,13 +454,56 @@ class GameBoard {
         // below that, the total sum
         tableData[7][13] = '<td class="regular-height" colspan="3" style="padding-top:5px;"><input type="number" class="score-input input-total" style="font-size: 24px;"></td>';
 
+        if (this.boardData.progressScoreContributor) {
+            const progressScoreContributor = this.boardData.progressScoreContributor;
+            if (progressScoreContributor.type === "ProgressScoreCompoundContributor") {
+                const contributorA = progressScoreContributor.scoreContributorA;
+                const contributorB = progressScoreContributor.scoreContributorB;
+                const contributorC = progressScoreContributor.scoreContributorC;
+
+                // add an input and the icon for each from right to left starting below the circular input
+                if (contributorA?.type) {
+                    tableData[7][11] = `<td class="regular-height"><input type="number" class="score-input"></td>`;
+                    tableData[7][10] = `<td class="regular-height score-table-operation-symbol">×</td>`;
+                    tableData[7][9] = `<td class="regular-height"><img src="${apiServer}/boards/${activeBoardId}/img/${contributorA.texture}.png" alt="${contributorA.type}" class="score-icon"></td>`;
+                }
+                if (contributorB?.type) {
+                    tableData[7][8] = `<td class="regular-height score-table-operation-symbol">+</td>`;
+                    tableData[7][7] = `<td class="regular-height"><input type="number" class="score-input"></td>`;
+                    tableData[7][6] = `<td class="regular-height score-table-operation-symbol">×</td>`;
+                    tableData[7][5] = `<td class="regular-height"  style="max-width:70px;width:70px;"><img src="${apiServer}/boards/${activeBoardId}/img/${contributorB.texture}.png" alt="${contributorB.type}" class="score-icon"></td>`;
+                }
+                if (contributorC?.type) {
+                    tableData[7][4] = `<td class="regular-height score-table-operation-symbol">+</td>`;
+                    tableData[7][3] = `<td class="regular-height"><input type="number" class="score-input"></td>`;
+                    tableData[7][2] = `<td class="regular-height score-table-operation-symbol">×</td>`;
+                    tableData[7][1] = `<td class="regular-height"><img src="${apiServer}/boards/${activeBoardId}/img/${contributorC.texture}.png" alt="${contributorC.type}" class="score-icon"></td>`;
+                }
+
+            } else if (progressScoreContributor.type === "ProgressScoreMonuments") {
+                // create a single cell (colspan count) and subdivide manually using flex such that all have the same width, there are count icons in the contributor this time
+                const count = progressScoreContributor.textures.length;
+                tableData[7][0] = `<td class="regular-height" colspan="${count}" style="padding: 0;"><div class="monument-container">`;
+                for (let i = 0; i < count; i++) {
+                    tableData[7][0] += `<div class="monument-icon-container"><img src="${apiServer}/boards/${activeBoardId}/img/${progressScoreContributor.textures[i]}.png" alt="Monument" class="score-icon"></div>`;
+                }
+                tableData[7][0] += '</div></td>';
+            }
+        }
+
 
         // Construct the table using the array
         for (let i = 0; i < tableData.length; i++) {
             const row = scoreTable.insertRow();
+            row.dataset.rowIndex = "" + i;
             for (let j = 0; j < tableData[i].length; j++) {
                 if (tableData[i][j]) {
                     row.innerHTML += tableData[i][j];
+                    // check if there is a colspan, skip this many cells
+                    if (tableData[i][j].includes('colspan')) {
+                        const colspan = parseInt(tableData[i][j].match(/colspan="(\d+)"/)[1]);
+                        j += colspan - 1;
+                    }
                 } else {
                     row.insertCell();
                 }
@@ -479,16 +522,73 @@ class GameBoard {
         connectInputs(13, 4, [{ x: 11, y: 4 }], ([a]) => a * this.boardData.endGameScoreContributorC.multiplier);
 
         // other goal calculation
-        connectInputs(11, 6, [], ([]) => 0);
+        if (this.boardData.progressScoreContributor) {
+            const progressScoreContributor = this.boardData.progressScoreContributor;
+            if (progressScoreContributor.type === "ProgressScoreCompoundContributor") {
+                const contributorA = progressScoreContributor.scoreContributorA;
+                const contributorB = progressScoreContributor.scoreContributorB;
+                const contributorC = progressScoreContributor.scoreContributorC;
+
+                const dependants = [];
+                if (contributorA?.type) dependants.push({ x: 11, y: 7 });
+                if (contributorB?.type) dependants.push({ x: 7, y: 7 });
+                if (contributorC?.type) dependants.push({ x: 3, y: 7 });
+
+                connectInputs(11, 6, dependants, values => {
+                    let result = 0;
+                    if (contributorA?.type) result += values[0] * contributorA.multiplier;
+                    if (contributorB?.type) result += values[1] * contributorB.multiplier;
+                    if (contributorC?.type) result += values[2] * contributorC.multiplier;
+                    return result;
+                });
+
+            } else if (progressScoreContributor.type === "ProgressScoreMonuments") {
+                const monumentContainers = document.querySelectorAll('.monument-icon-container');
+                // add click listener to each monument icon, on click it should toggle a data attribute "selected" and should apply a backdrop shadow effect and calculate the total score
+                monumentContainers.forEach((container, index) => {
+                    const input11_6 = getInputElement(11, 6);
+                    input11_6.value = 0;
+                    container.addEventListener('click', () => {
+                        const selected = container.dataset.selected === 'true';
+                        container.dataset.selected = !selected;
+                        container.style.filter = selected ? 'none' : 'drop-shadow(0 0 3px red)';
+                        const selectedMonuments = Array.from(monumentContainers).filter(c => c.dataset.selected === 'true').length;
+                        input11_6.value = progressScoreContributor.fields[selectedMonuments] || 0;
+                    });
+                });
+            }
+        }
 
 
         // common goal score calculation
         connectInputs(15, 6, [{ x: 15, y: 2 }, { x: 15, y: 4 }], ([a, b]) => a * 10 + b * 10);
 
         // total score calculation
-        connectInputs(9, 6, [{ x: 1, y: 6 }, { x: 3, y: 6 }, { x: 5, y: 6 }, { x: 7, y: 6 }], ([a, b, c, d]) => a + b + c + d);
+        connectInputs(9, 6, [{ x: 1, y: 6 }, { x: 3, y: 6 }, { x: 5, y: 6 }, {
+            x: 7,
+            y: 6
+        }], ([a, b, c, d]) => a + b + c + d);
         connectInputs(13, 6, [{ x: 13, y: 0 }, { x: 13, y: 2 }, { x: 13, y: 4 }], ([a, b, c]) => a + b + c);
-        connectInputs(13, 7, [{ x: 9, y: 6 }, { x: 11, y: 6 }, { x: 13, y: 6 }, { x: 15, y: 6 }], ([a, b, c, d]) => a + b + c + d);
+        connectInputs(13, 7, [{ x: 9, y: 6 }, { x: 11, y: 6 }, { x: 13, y: 6 }, {
+            x: 15,
+            y: 6
+        }], ([a, b, c, d]) => a + b + c + d);
+
+        // Utility to fetch an input element at a specific position
+        function getInputElement(x, y) {
+            const row = scoreTable.rows[y];
+            if (!row) return null;
+            let cellIndex = 0;
+            for (let i = 0; i < row.cells.length; i++) {
+                const cell = row.cells[i];
+                const colspan = cell.colSpan || 1;
+                if (cellIndex === x) {
+                    return cell.querySelector('input');
+                }
+                cellIndex += colspan;
+            }
+            return null;
+        };
 
 
         // debug add click event listener to all input fields and print their coordinates
@@ -506,12 +606,6 @@ class GameBoard {
         function connectInputs(x, y, inputs, calculate) {
             const scoreTable = document.querySelector('.score-table');
 
-            // Utility to fetch an input element at a specific position
-            const getInputElement = (x, y) => {
-                const row = scoreTable.rows[y];
-                return row ? row.cells[x]?.querySelector('input') : null;
-            };
-
             // Fetch the target element
             const targetInput = getInputElement(x, y);
             if (!targetInput) {
@@ -525,7 +619,6 @@ class GameBoard {
             inputs.forEach(({ x, y }) => {
                 const input = getInputElement(x, y);
                 if (input) {
-                    console.log(input)
                     input.addEventListener('input', () => {
                         const values = inputs.map(({ x, y }) => {
                             const depInput = getInputElement(x, y);
@@ -539,7 +632,6 @@ class GameBoard {
                             }
                             return depInput.value ? parseFloat(depInput.value) : 0;
                         });
-                        console.log(values);
                         targetInput.value = calculate(values).toFixed(2).replace(/\.0+$/, '');
                         targetInput.dispatchEvent(new Event('input', { bubbles: true }));
                     });

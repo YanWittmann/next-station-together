@@ -46,8 +46,8 @@ public class GameBoard {
     private ScoreContributor sharedObjectiveScoreContributorA;
     private ScoreContributor sharedObjectiveScoreContributorB;
 
-    // scoring progress: A
-    private ProgressScoreContributor progressScoreContributorA;
+    // scoring progress:
+    private ProgressScoreContributor progressScoreContributor;
 
     public String serialize() {
         final Gson gson = new GsonBuilder()
@@ -61,9 +61,6 @@ public class GameBoard {
             throw new IOException("Could not create directory: " + dir);
         }
         TextureAccess.cleanDirectory(dir);
-
-        final String serialized = serialize();
-        Files.writeString(new File(dir, "board-data.json").toPath(), serialized);
 
         // iterate over all elements that provide an icon and write them to the directory
         final File imgDir = new File(dir, "img");
@@ -87,6 +84,12 @@ public class GameBoard {
         TextureAccess.TextureData.write(endGameScoreContributorC, imgDir);
         TextureAccess.TextureData.write(sharedObjectiveScoreContributorA, imgDir);
         TextureAccess.TextureData.write(sharedObjectiveScoreContributorB, imgDir);
+        if (progressScoreContributor != null) {
+            TextureAccess.TextureData.write(progressScoreContributor.getTextures(), imgDir);
+        }
+
+        final String serialized = serialize();
+        Files.writeString(new File(dir, "board-data.json").toPath(), serialized);
     }
 
     public Station getClosestStation(int x, int y) {

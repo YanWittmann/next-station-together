@@ -3,9 +3,11 @@ package de.yanwittmann.nextstation.model;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.awt.image.RenderedImage;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -137,21 +139,39 @@ public class BoardRendererTest extends Canvas {
         }
     }
 
-    public static void main(String[] args) throws IOException {
-        String content = new String(Files.readAllBytes(Paths.get(args[0] + "/board-data.json")));
+    public static Frame display(File baseDir) throws IOException {
+        String content = new String(Files.readAllBytes(Paths.get(baseDir.getAbsolutePath() + "/board-data.json")));
         JSONObject boardData = new JSONObject(content);
 
         Frame frame = new Frame("Board Renderer");
-        BoardRendererTest boardRenderer = new BoardRendererTest(new File(args[0]), boardData);
+        BoardRendererTest boardRenderer = new BoardRendererTest(baseDir, boardData);
         frame.add(boardRenderer);
         frame.setSize(boardRenderer.width * STATION_SIZE + 20, boardRenderer.height * STATION_SIZE + 40);
         frame.setLocationRelativeTo(null);
         frame.setVisible(true);
         frame.addWindowListener(new WindowAdapter() {
-            @Override
-            public void windowClosing(WindowEvent windowEvent) {
-                System.exit(0);
+            public void windowClosing(WindowEvent e) {
+                frame.dispose();
             }
         });
+
+        // write screenshot to the arg directory
+        // wait a second for the window to render
+        try {
+            Thread.sleep(200);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        // grab the boardRenderer's content
+        Image image = boardRenderer.createImage(boardRenderer.getWidth(), boardRenderer.getHeight());
+        Graphics graphics = image.getGraphics();
+        boardRenderer.paint(graphics);
+        try {
+            ImageIO.write((RenderedImage) image, "png", new File(baseDir.getParent(), baseDir.getName() + ".png"));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        return frame;
     }
 }

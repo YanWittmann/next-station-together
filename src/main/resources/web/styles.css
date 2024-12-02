@@ -223,3 +223,8 @@ input[type=number] {
     border: 2px solid #000;
 }
 
+.monument-container {
+    display: flex;
+    justify-content: space-between;
+    max-width: 1px;
+}
