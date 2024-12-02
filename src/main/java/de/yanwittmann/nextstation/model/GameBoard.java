@@ -186,4 +186,8 @@ public class GameBoard {
         }
         return closestDistrict;
     }
+
+    public String getRandomId() {
+        return UUID.nameUUIDFromBytes(serialize().getBytes()).toString().substring(0, 8);
+    }
 }

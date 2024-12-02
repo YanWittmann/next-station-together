@@ -3,7 +3,6 @@ package de.yanwittmann.nextstation.setup;
 import de.yanwittmann.nextstation.model.GameBoard;
 import de.yanwittmann.nextstation.model.board.*;
 import de.yanwittmann.nextstation.model.score.*;
-import de.yanwittmann.nextstation.util.GeneralUtil;
 import de.yanwittmann.nextstation.util.TmpIntersection;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -581,16 +580,6 @@ public class BoardTemplates {
             // add points based on how close the river length is to the target length
             int lengthDiff = (int) Math.pow(Math.abs(riverLayout.pathLength() - targetLength), 2);
             score += 100 - lengthDiff;
-
-            // add points based on how many districts are visited
-            Set<BoardDistrict> visitedDistricts = new HashSet<>();
-            for (RiverLayout.Point point : riverLayout.getPath()) {
-                final BoardDistrict district = gameBoard.findDistrict((int) point.getX(), (int) point.getY());
-                if (district != null) {
-                    visitedDistricts.add(district);
-                }
-            }
-            score += visitedDistricts.size() * 10;
 
             if (bestRiver == null || score > bestScore) {
                 bestScore = score;

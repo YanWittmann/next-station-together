@@ -6,6 +6,7 @@ import org.json.JSONObject;
 import java.awt.*;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -13,6 +14,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class BoardRendererTest extends Canvas {
+
+    private final File dir;
 
     private final int width;
     private final int height;
@@ -26,7 +29,8 @@ public class BoardRendererTest extends Canvas {
     // Global variable for station size
     public static int STATION_SIZE = 75;
 
-    public BoardRendererTest(JSONObject boardData) {
+    public BoardRendererTest(File dir, JSONObject boardData) {
+        this.dir = dir;
         this.width = boardData.getInt("width");
         this.height = boardData.getInt("height");
         this.districts = boardData.getJSONArray("districts");
@@ -124,7 +128,7 @@ public class BoardRendererTest extends Canvas {
         }
 
         try {
-            Image icon = Toolkit.getDefaultToolkit().getImage("target/createBoardTest/img/" + texture + ".png");
+            Image icon = Toolkit.getDefaultToolkit().getImage(dir.getAbsolutePath() + "/img/" + texture + ".png");
             iconCache.put(texture, icon);
             return icon;
         } catch (Exception e) {
@@ -134,11 +138,11 @@ public class BoardRendererTest extends Canvas {
     }
 
     public static void main(String[] args) throws IOException {
-        String content = new String(Files.readAllBytes(Paths.get("target/createBoardTest/board-data.json")));
+        String content = new String(Files.readAllBytes(Paths.get(args[0] + "/board-data.json")));
         JSONObject boardData = new JSONObject(content);
 
         Frame frame = new Frame("Board Renderer");
-        BoardRendererTest boardRenderer = new BoardRendererTest(boardData);
+        BoardRendererTest boardRenderer = new BoardRendererTest(new File(args[0]), boardData);
         frame.add(boardRenderer);
         frame.setSize(boardRenderer.width * STATION_SIZE + 20, boardRenderer.height * STATION_SIZE + 40);
         frame.setLocationRelativeTo(null);

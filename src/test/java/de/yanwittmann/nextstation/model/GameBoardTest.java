@@ -36,10 +36,10 @@ class GameBoardTest {
                 .scoreLondon()
                 .getBoard();
 
+        final File outDir = new File("src/main/resources/web/boards/" + board.getRandomId());
+        board.writeSerialized(outDir);
 
-        board.writeSerialized(new File("target/createBoardTest"));
-
-        BoardRendererTest.main(new String[]{});
+        BoardRendererTest.main(new String[]{outDir.getAbsolutePath()});
         try {
             Thread.sleep(TimeUnit.MINUTES.toMillis(10));
         } catch (InterruptedException e) {

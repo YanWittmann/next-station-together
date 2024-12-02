@@ -1,3 +1,32 @@
+// get the current url host/port as the apiServer
+const apiServer = window.location.origin;
+console.log('apiServer:', apiServer);
+
+let activeBoardId = null;
+const canvas = document.getElementById('gameCanvas');
+let activeBoard = null;
+
+function initializeGame() {
+    document.getElementById('board-id').addEventListener('input', (e) => {
+        activeBoardId = e.target.value;
+        updateBoard();
+    });
+
+    if (document.getElementById('board-id').value) {
+        activeBoardId = document.getElementById('board-id').value;
+        updateBoard();
+    }
+
+    function updateBoard() {
+        if (activeBoardId) {
+            if (activeBoard) {
+                activeBoard.destroyBoard();
+            }
+            activeBoard = new GameBoard(canvas);
+        }
+    }
+}
+
 class GameBoard {
     constructor(canvas) {
         this.canvas = canvas;
@@ -53,7 +82,7 @@ class GameBoard {
 
     async loadBoardData() {
         try {
-            const response = await fetch('http://localhost:8000/board-data.json');
+            const response = await fetch(`${apiServer}/boards/${activeBoardId}/board-data.json`);
             this.boardData = await response.json();
             this.prebakedConnections = this.boardData.connections.map(conn => ({
                 x1: conn.x1,
@@ -65,6 +94,7 @@ class GameBoard {
             await this.preloadImages();
             this.draw();
             this.populateScoreTable();
+            console.log('Board data loaded:', this.boardData);
         } catch (error) {
             console.error('Error loading board data:', error);
         }
@@ -79,7 +109,7 @@ class GameBoard {
                     this.iconCache.set(texture, img);
                     resolve();
                 };
-                img.src = `http://localhost:8000/img/${texture}.png`;
+                img.src = `${apiServer}/boards/${activeBoardId}/img/${texture}.png`;
             });
         };
 
@@ -93,30 +123,25 @@ class GameBoard {
     draw() {
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
-        // Draw river
         this.drawRiver();
 
-        // Draw districts
         this.drawDistricts();
 
-        // Draw connections
         this.drawPrebakedConnections();
+
         this.drawUserConnections();
 
-        // Draw stations
-        this.drawStations();
-
-        // Draw intersections
         this.drawIntersections();
 
-        // Draw current dragging connection if any
+        this.drawStations();
+
         if (this.dragStart && this.currentConnection) {
             this.drawConnection(
                 this.dragStart.x,
                 this.dragStart.y,
                 this.currentConnection.x,
                 this.currentConnection.y,
-                this.getConnectionColor(this.dragStart.station)
+                this.getConnectionColor(this.selectedColor)
             );
         }
     }
@@ -190,7 +215,7 @@ class GameBoard {
 
     drawUserConnections() {
         this.ctx.setLineDash([]);
-        this.ctx.lineWidth = 3;
+        this.ctx.lineWidth = 7;
         this.userConnections.forEach(conn => {
             this.drawConnection(conn.x1, conn.y1, conn.x2, conn.y2, conn.color);
         });
@@ -357,66 +382,25 @@ class GameBoard {
         ];
 
         // Create a 12x8 array to represent the table
-        const tableData = Array(10).fill().map(() => Array(15).fill(''));
+        const tableData = Array(10).fill().map(() => Array(16).fill(''));
 
         // Populate the array with cell contents
-        /*for (let i = 0; i < 8; i++) {
-            if (i < 3) {
-                const contributor = turnWiseContributors[i];
-                tableData[i][0] = `<td><img src="http://localhost:8000/img/${contributor.texture}.png" alt="${contributor.type}" class="score-icon"></td>`;
-                // tableData[i][1] = `<td>${i === 2 ? '×' + contributor.multiplier : (i === 1 ? '+' : '×')}</td>`;
-                for (let j = 1; j < 5; j++) {
-                    tableData[i][j] = '<td><input type="number" class="score-input"></td>';
-                }
-            } else if (i === 3) {
-                tableData[i][0] = '<td colspan="2">=</td>';
-                for (let j = 1; j < 5; j++) {
-                    tableData[i][j] = '<td class="sum-cell"></td>';
-                }
-            }
-
-            tableData[i][6] = '<td class="separator"></td>';
-
-            if (i < 3) {
-                const contributor = endGameContributors[i];
-                tableData[i][7] = `<td><img src="http://localhost:8000/img/${contributor.texture}.png" alt="${contributor.type}" class="score-icon"></td>`;
-                tableData[i][8] = `<td>×${contributor.multiplier}</td>`;
-                tableData[i][9] = '<td><input type="number" class="score-input"></td>';
-            } else if (i === 3) {
-                tableData[i][7] = '<td colspan="2">=</td>';
-                tableData[i][9] = '<td class="sum-cell"></td>';
-            }
-
-            if (i === 0) {
-                tableData[i][10] = `
-                    <td rowspan="3" class="bonus-section">
-                        <div class="bonus-icons">
-                            <img src="placeholder1.png" alt="Bonus 1" class="score-icon">
-                            <img src="placeholder2.png" alt="Bonus 2" class="score-icon">
-                            <img src="placeholder3.png" alt="Bonus 3" class="score-icon">
-                        </div>
-                    </td>
-                `;
-            }
-        }*/
         function createTurnWiseContributorRow(rowIndex, contributorIndex, symbol) {
-            tableData[rowIndex][0] = `<td class="regular-height"><img src="http://localhost:8000/img/${turnWiseContributors[contributorIndex].texture}.png" alt="${turnWiseContributors[contributorIndex].type}" class="score-icon"></td>`;
+            tableData[rowIndex][0] = `<td class="regular-height"><img src="${apiServer}/boards/${activeBoardId}/img/${turnWiseContributors[contributorIndex].texture}.png" alt="${turnWiseContributors[contributorIndex].type}" class="score-icon"></td>`;
             tableData[rowIndex][1] = '<td class="regular-height"><input type="number" class="score-input"></td>';
-            tableData[rowIndex][2] = '<td class="regular-height score-table-turnwise-border"></td>';
+            tableData[rowIndex][2] = '<td class="regular-height"></td>';
             tableData[rowIndex][3] = '<td class="regular-height"><input type="number" class="score-input"></td>';
-            tableData[rowIndex][4] = '<td class="regular-height score-table-turnwise-border"></td>';
+            tableData[rowIndex][4] = '<td class="regular-height"></td>';
             tableData[rowIndex][5] = '<td class="regular-height"><input type="number" class="score-input"></td>';
-            tableData[rowIndex][6] = '<td class="regular-height score-table-turnwise-border"></td>';
+            tableData[rowIndex][6] = '<td class="regular-height"></td>';
             tableData[rowIndex][7] = '<td class="regular-height"><input type="number" class="score-input"></td>';
-            tableData[rowIndex][8] = '<td class="regular-height score-table-turnwise-border"></td>';
+            tableData[rowIndex][8] = '<td class="regular-height score-table-turnwise-border"><div/></td>';
 
             tableData[rowIndex + 1][1] = `<td class="score-table-operation-symbol">${symbol}</td>`;
-            tableData[rowIndex + 1][2] = `<td class="score-table-turnwise-border"></td>`;
             tableData[rowIndex + 1][3] = `<td class="score-table-operation-symbol">${symbol}</td>`;
-            tableData[rowIndex + 1][4] = `<td class="score-table-turnwise-border"></td>`;
             tableData[rowIndex + 1][5] = `<td class="score-table-operation-symbol">${symbol}</td`;
-            tableData[rowIndex + 1][6] = `<td class="score-table-turnwise-border"></td>`;
             tableData[rowIndex + 1][7] = `<td class="score-table-operation-symbol">${symbol}</td>`;
+            tableData[rowIndex + 1][8] = `<td class="score-table-turnwise-border"><div/></td>`;
         }
 
         createTurnWiseContributorRow(0, 0, "×");
@@ -424,27 +408,51 @@ class GameBoard {
         createTurnWiseContributorRow(4, 2, "=");
 
         // sum cells
-        tableData[6][1] = '<td class="regular-height"><input type="number" class="score-input"></td>';
+        tableData[6][1] = '<td class="regular-height"><input type="number" class="score-input input-turnwise"></td>';
         tableData[6][2] = '<td class="regular-height width-none score-table-operation-symbol">+</td>';
-        tableData[6][3] = '<td class="regular-height"><input type="number" class="score-input"></td>';
+        tableData[6][3] = '<td class="regular-height"><input type="number" class="score-input input-turnwise"></td>';
         tableData[6][4] = '<td class="regular-height width-none score-table-operation-symbol">+</td>';
-        tableData[6][5] = '<td class="regular-height"><input type="number" class="score-input"></td>';
+        tableData[6][5] = '<td class="regular-height"><input type="number" class="score-input input-turnwise"></td>';
         tableData[6][6] = '<td class="regular-height width-none score-table-operation-symbol">+</td>';
-        tableData[6][7] = '<td class="regular-height"><input type="number" class="score-input"></td>';
+        tableData[6][7] = '<td class="regular-height"><input type="number" class="score-input input-turnwise"></td>';
         tableData[6][8] = '<td class="regular-height width-none score-table-operation-symbol">=</td>';
-        tableData[6][9] = '<td class="regular-height"><input type="number" class="score-input"></td>';
+        tableData[6][9] = '<td class="regular-height"><input type="number" class="score-input input-turnwise" style="max-width:60px;"></td>';
 
         function createEndGameContributorRow(rowIndex, contributorIndex) {
-            tableData[rowIndex][9] = `<td class="regular-height"><img src="http://localhost:8000/img/${endGameContributors[contributorIndex].texture}.png" alt="${endGameContributors[contributorIndex].type}" class="score-icon"></td>`;
-            tableData[rowIndex][10] = '<td class="regular-height">×</td>';
+            tableData[rowIndex][9] = `<td class="regular-height"><img src="${apiServer}/boards/${activeBoardId}/img/${endGameContributors[contributorIndex].texture}.png" alt="${endGameContributors[contributorIndex].type}" class="score-icon"></td>`;
+            tableData[rowIndex][10] = '<td class="regular-height score-table-operation-symbol">×</td>';
             tableData[rowIndex][11] = '<td class="regular-height"><input type="number" class="score-input"></td>';
-            tableData[rowIndex][12] = '<td class="regular-height">=</td>';
+            tableData[rowIndex][12] = '<td class="regular-height score-table-operation-symbol">=</td>';
             tableData[rowIndex][13] = '<td class="regular-height"><input type="number" class="score-input"></td>';
+            tableData[rowIndex + 1][13] = '<td class="score-table-operation-symbol">+</td>';
+            tableData[rowIndex][14] = `<td class="score-table-endgame-border"></td>`;
+            tableData[rowIndex + 1][14] = `<td class="score-table-endgame-border"></td>`;
         }
 
         createEndGameContributorRow(0, 0);
         createEndGameContributorRow(2, 1);
         createEndGameContributorRow(4, 2);
+        tableData[5][13] = '<td class="regular-height score-table-operation-symbol">=</td>';
+
+        // bonus points
+        tableData[0][15] = `<td class="regular-height"><img src="${apiServer}/static/img/common-goal-icon.png" alt="Common Goal" class="score-icon"></td>`;
+        tableData[1][15] = `<td class=""><span class="regular-height score-table-operation-symbol" style="font-size: 24px;">⇓</span></td>`;
+        // checkbox
+        tableData[2][15] = `<td class="regular-height" style="background: #4e8cff;"><input type="checkbox" class="score-input"></td>`;
+        tableData[3][15] = `<td class="regular-height width-none" style="vertical-align: top !important; position: relative;"><div class="common-goal-text">+10</div></td>`;
+        tableData[4][15] = `<td class="regular-height" style="background: #4e8cff;"><input type="checkbox" class="score-input"></td>`;
+        tableData[5][15] = `<td class="regular-height width-none" style="vertical-align: top !important; position: relative;"><div class="common-goal-text">+10</div></td>`;
+
+        // add row below
+        tableData[6][10] = '<td class="regular-height score-table-operation-symbol">+</td>';
+        tableData[6][11] = '<td class="regular-height"><input type="number" class="score-input circular-input"></td>';
+        tableData[6][12] = '<td class="regular-height score-table-operation-symbol">+</td>';
+        tableData[6][13] = '<td class="regular-height"><input type="number" class="score-input input-endgame"></td>';
+        tableData[6][14] = '<td class="regular-height score-table-operation-symbol">+</td>';
+        tableData[6][15] = '<td class="regular-height"><input type="number" class="score-input input-common-goal"></td>';
+
+        // below that, the total sum
+        tableData[7][13] = '<td class="regular-height" colspan="3" style="padding-top:5px;"><input type="number" class="score-input input-total" style="font-size: 24px;"></td>';
 
 
         // Construct the table using the array
@@ -458,12 +466,103 @@ class GameBoard {
                 }
             }
         }
+
+        // turnwise score calculation
+        connectInputs(1, 6, [{ x: 1, y: 0 }, { x: 1, y: 2 }, { x: 1, y: 4 }], ([a, b, c]) => a * b + c);
+        connectInputs(3, 6, [{ x: 3, y: 0 }, { x: 3, y: 2 }, { x: 3, y: 4 }], ([a, b, c]) => a * b + c);
+        connectInputs(5, 6, [{ x: 5, y: 0 }, { x: 5, y: 2 }, { x: 5, y: 4 }], ([a, b, c]) => a * b + c);
+        connectInputs(7, 6, [{ x: 7, y: 0 }, { x: 7, y: 2 }, { x: 7, y: 4 }], ([a, b, c]) => a * b + c);
+
+        // endgame score calculation
+        connectInputs(13, 0, [{ x: 11, y: 0 }], ([a]) => a * this.boardData.endGameScoreContributorA.multiplier);
+        connectInputs(13, 2, [{ x: 11, y: 2 }], ([a]) => a * this.boardData.endGameScoreContributorB.multiplier);
+        connectInputs(13, 4, [{ x: 11, y: 4 }], ([a]) => a * this.boardData.endGameScoreContributorC.multiplier);
+
+        // other goal calculation
+        connectInputs(11, 6, [], ([]) => 0);
+
+
+        // common goal score calculation
+        connectInputs(15, 6, [{ x: 15, y: 2 }, { x: 15, y: 4 }], ([a, b]) => a * 10 + b * 10);
+
+        // total score calculation
+        connectInputs(9, 6, [{ x: 1, y: 6 }, { x: 3, y: 6 }, { x: 5, y: 6 }, { x: 7, y: 6 }], ([a, b, c, d]) => a + b + c + d);
+        connectInputs(13, 6, [{ x: 13, y: 0 }, { x: 13, y: 2 }, { x: 13, y: 4 }], ([a, b, c]) => a + b + c);
+        connectInputs(13, 7, [{ x: 9, y: 6 }, { x: 11, y: 6 }, { x: 13, y: 6 }, { x: 15, y: 6 }], ([a, b, c, d]) => a + b + c + d);
+
+
+        // debug add click event listener to all input fields and print their coordinates
+        const inputs = document.querySelectorAll('.score-input');
+        inputs.forEach(input => {
+            input.addEventListener('click', () => {
+                const cell = input.closest('td');
+                const row = cell.parentElement;
+                const x = cell.cellIndex;
+                const y = row.rowIndex;
+                console.log('Clicked:', x, y);
+            });
+        });
+
+        function connectInputs(x, y, inputs, calculate) {
+            const scoreTable = document.querySelector('.score-table');
+
+            // Utility to fetch an input element at a specific position
+            const getInputElement = (x, y) => {
+                const row = scoreTable.rows[y];
+                return row ? row.cells[x]?.querySelector('input') : null;
+            };
+
+            // Fetch the target element
+            const targetInput = getInputElement(x, y);
+            if (!targetInput) {
+                console.error('Target input not found:', x, y);
+                return;
+            }
+
+            targetInput.value = '0';
+
+            // Attach event listeners to all dependent inputs
+            inputs.forEach(({ x, y }) => {
+                const input = getInputElement(x, y);
+                if (input) {
+                    console.log(input)
+                    input.addEventListener('input', () => {
+                        const values = inputs.map(({ x, y }) => {
+                            const depInput = getInputElement(x, y);
+                            if (!depInput) {
+                                console.error('Dependent input not found:', x, y);
+                                return 0;
+                            }
+                            // check type
+                            if (depInput.type === 'checkbox') {
+                                return depInput.checked ? 1 : 0;
+                            }
+                            return depInput.value ? parseFloat(depInput.value) : 0;
+                        });
+                        console.log(values);
+                        targetInput.value = calculate(values).toFixed(2).replace(/\.0+$/, '');
+                        targetInput.dispatchEvent(new Event('input', { bubbles: true }));
+                    });
+                } else {
+                    console.error('Input not found:', x, y);
+                    targetInput.style.backgroundColor = 'red';
+                }
+            });
+        }
+    }
+
+    destroyBoard() {
+        // listeners
+        this.canvas.removeEventListener('mousedown', this.handleMouseDown);
+        this.canvas.removeEventListener('mousemove', this.handleMouseMove);
+        this.canvas.removeEventListener('mouseup', this.handleMouseUp);
+        this.canvas.removeEventListener('contextmenu', this.handleRightClick);
+        // clear canvas
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        // clear score table
+        const scoreTable = document.querySelector('.score-table');
+        scoreTable.innerHTML = '';
     }
 }
 
-// Initialize the game when the DOM is loaded
-document.addEventListener('DOMContentLoaded', () => {
-    const canvas = document.getElementById('gameCanvas');
-    new GameBoard(canvas);
-});
-
+initializeGame();
