@@ -8,6 +8,7 @@ import lombok.EqualsAndHashCode;
 @Data
 @EqualsAndHashCode(callSuper = true)
 public class GameCardFreeEntry extends GameCard {
+    private String description = "Either to be used like a joker, or draw a line to a monument and an additional line from there to any symbol station.";
 
     public GameCardFreeEntry() {
         super("GameCardFreeEntry");

@@ -228,3 +228,83 @@ input[type=number] {
     justify-content: space-between;
     max-width: 1px;
 }
+
+#card-decks {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    display: flex;
+    gap: 10px;
+}
+
+.card-deck {
+    width: 60px;
+    height: 90px;
+    background-color: #f0f0f0;
+    border: 2px solid #333;
+    border-radius: 5px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    font-weight: bold;
+}
+
+#card-display {
+    cursor: pointer;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 373px;
+    height: 361px;
+    background-color: white;
+    border: 2px solid #333;
+    border-radius: 10px;
+    display: none;
+    justify-content: center;
+    align-items: center;
+    font-size: 18px;
+    text-align: center;
+    padding: 10px;
+}
+
+#picked-cards {
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-width: 200px;
+}
+
+.picked-cards-container {
+    background-color: rgba(255, 255, 255, 0.8);
+    border: 1px solid #333;
+    border-radius: 5px;
+    padding: 5px;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.picked-cards-container h4 {
+    margin: 0 0 5px 0;
+    font-size: 14px;
+}
+
+.picked-card {
+    display: flex;
+    align-items: center;
+    margin-bottom: 5px;
+    font-size: 12px;
+}
+
+.picked-card img {
+    width: 30px;
+    height: 30px;
+    margin-right: 5px;
+    object-fit: contain;
+}
+

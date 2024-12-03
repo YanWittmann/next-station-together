@@ -147,6 +147,8 @@ class GameBoardTest {
         BoardTemplates.start(board)
                 .connectionsConnectNeighbors()
                 .connectionsPruneMaxDistance(5)
+                .cardsStationRegular()
+                .cardsSharedObjectiveLondon()
                 .scoreLondon();
 
         final File outDir = new File("src/main/resources/web/boards/next-station-together-london");
@@ -251,6 +253,8 @@ class GameBoardTest {
                 .connectionsConnectNeighbors()
                 .connectionsPruneMaxDistance(5)
                 .connectionsPruneInvalidIntersections()
+                .cardsStationRegular()
+                .cardsSharedObjectiveParis()
                 .scoreParis();
 
         final File outDir = new File("src/main/resources/web/boards/next-station-together-paris");

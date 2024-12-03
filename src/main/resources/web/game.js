@@ -97,6 +97,7 @@ class GameBoard {
             this.draw();
             this.populateScoreTable();
             console.log('Board data loaded:', this.boardData);
+            initializeCardDecks(); // Add this line
         } catch (error) {
             console.error('Error loading board data:', error);
             this.ctx.fillStyle = 'blue';
@@ -669,4 +670,149 @@ class GameBoard {
     }
 }
 
+// Card picker functionality
+let stationCards = [];
+let objectiveCards = [];
+let pickedStationCards = [];
+let pickedObjectiveCards = [];
+let currentCard = null;
+
+function shuffleArray(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+    }
+}
+
+function initializeCardDecks() {
+    stationCards = [...activeBoard.boardData.stationCards];
+    objectiveCards = [...activeBoard.boardData.sharedObjectiveCards];
+    pickedStationCards = [];
+    pickedObjectiveCards = [];
+    shuffleArray(stationCards);
+    shuffleArray(objectiveCards);
+    updateCardCounts();
+    updatePickedCards();
+}
+
+function updateCardCounts() {
+    document.querySelector('#station-deck .card-count').textContent = stationCards.length;
+    document.querySelector('#objective-deck .card-count').textContent = objectiveCards.length;
+}
+
+function formatTitle(title) {
+    if (title.includes("_") || title === title.toUpperCase()) {
+        // "FIVE_MONUMENTS -> Five Monuments"
+        return title.split("_").map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(" ");
+    } else {
+        // "FiveMonuments" -> "Five Monuments"
+        return title.replace(/([A-Z])/g, ' $1').trim();
+    }
+}
+
+function displayCard(card, type) {
+    const cardDisplay = document.getElementById('card-display');
+    cardDisplay.style.display = 'flex';
+    cardDisplay.innerHTML = `
+    <div>
+      <h3>${formatTitle(card.cardType || card.type || '')}</h3>
+      <p>${card.description || ''}</p>
+      <img src="${apiServer}/boards/${activeBoardId}/img/${card.texture}.png" alt="${card.type}" style="max-width: 100%; max-height: 200px;">
+    </div>
+  `;
+    currentCard = card;
+    if (currentCard) {
+        if (type === 'station') {
+            pickedStationCards.push(currentCard);
+        } else if (type === 'objective') {
+            pickedObjectiveCards.push(currentCard);
+        }
+        updatePickedCards();
+    }
+}
+
+function hideCard() {
+    document.getElementById('card-display').style.display = 'none';
+    currentCard = null;
+}
+
+function updatePickedCards() {
+    const stationContainer = document.getElementById('picked-station-cards');
+    const objectiveContainer = document.getElementById('picked-objective-cards');
+
+    stationContainer.innerHTML = '<h4>Stations</h4>';
+    objectiveContainer.innerHTML = '<h4>Objectives</h4>';
+
+    pickedStationCards.slice().reverse().forEach(card => {
+        const cardElement = createPickedCardElement(card);
+        stationContainer.appendChild(cardElement);
+    });
+
+    pickedObjectiveCards.slice().reverse().forEach(card => {
+        const cardElement = createPickedCardElement(card);
+        objectiveContainer.appendChild(cardElement);
+    });
+}
+
+function createPickedCardElement(card) {
+    const cardElement = document.createElement('div');
+    cardElement.className = 'picked-card';
+    cardElement.innerHTML = `
+        <img src="${apiServer}/boards/${activeBoardId}/img/${card.texture}.png" alt="${card.type}">
+        <span>${formatTitle(card.cardType || card.type || '')}</span>
+    `;
+    return cardElement;
+}
+
+document.getElementById('station-deck').addEventListener('click', () => {
+    if (stationCards.length > 0) {
+        const card = stationCards.pop();
+        displayCard(card, 'station');
+        updateCardCounts();
+    }
+});
+
+document.getElementById('objective-deck').addEventListener('click', () => {
+    if (objectiveCards.length > 0) {
+        const card = objectiveCards.pop();
+        displayCard(card, 'objective');
+        updateCardCounts();
+    }
+});
+
+document.getElementById('card-display').addEventListener('click', hideCard);
+
+document.addEventListener('contextmenu', (e) => {
+    if (e.target.closest('#station-deck')) {
+        e.preventDefault();
+
+        stationCards = [...activeBoard.boardData.stationCards, ...pickedStationCards];
+        pickedStationCards = [];
+        shuffleArray(stationCards);
+        updateCardCounts();
+        updatePickedCards();
+
+        stationCards = [...activeBoard.boardData.stationCards, ...pickedStationCards];
+        pickedStationCards = [];
+        shuffleArray(stationCards);
+        updateCardCounts();
+        updatePickedCards();
+    } else if (e.target.closest('#objective-deck')) {
+        e.preventDefault();
+
+        objectiveCards = [...activeBoard.boardData.sharedObjectiveCards, ...pickedObjectiveCards];
+        pickedObjectiveCards = [];
+        shuffleArray(objectiveCards);
+        updateCardCounts();
+        updatePickedCards();
+
+        objectiveCards = [...activeBoard.boardData.sharedObjectiveCards, ...pickedObjectiveCards];
+        pickedObjectiveCards = [];
+        shuffleArray(objectiveCards);
+        updateCardCounts();
+        updatePickedCards();
+    }
+});
+
 initializeGame();
+

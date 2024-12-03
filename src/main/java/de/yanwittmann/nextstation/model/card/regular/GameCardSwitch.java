@@ -8,6 +8,7 @@ import lombok.EqualsAndHashCode;
 @Data
 @EqualsAndHashCode(callSuper = true)
 public class GameCardSwitch extends GameCard {
+    private String description = "Pull another card. You may build the connection starting from anywhere on your line.";
 
     public GameCardSwitch() {
         super("GameCardSwitch");

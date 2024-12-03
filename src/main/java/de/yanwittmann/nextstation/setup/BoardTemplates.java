@@ -668,12 +668,25 @@ public class BoardTemplates {
     // cards
 
     public BoardTemplates cardsStationRegular() {
+
+        /*for (GameCardRegularStation.CardSymbol cardSymbol : GameCardRegularStation.CardSymbol.excludingJoker()) {
+            gameBoard.getStationCards().add(with(new GameCardRegularStation(), i -> i.setCardType(cardSymbol)));
+        }
         for (GameCardRegularStation.CardSymbol cardSymbol : GameCardRegularStation.CardSymbol.excludingJoker()) {
             gameBoard.getStationCards().add(with(new GameCardRegularStation(), i -> i.setCardType(cardSymbol)));
         }
         gameBoard.getStationCards().add(with(new GameCardRegularStation(), i -> i.setCardType(GameCardRegularStation.CardSymbol.JOKER)));
 
+        gameBoard.getStationCards().add(new GameCardSwitch());*/
+
+        for (GameCardRegularStation.CardSymbol cardSymbol : GameCardRegularStation.CardSymbol.values()) {
+            gameBoard.getStationCards().add(with(new GameCardRegularStation(), i -> i.setCardType(cardSymbol)));
+        }
+        for (GameCardRegularStation.CardSymbol cardSymbol : GameCardRegularStation.CardSymbol.values()) {
+            gameBoard.getStationCards().add(with(new GameCardRegularStation(), i -> i.setCardType(cardSymbol)));
+        }
         gameBoard.getStationCards().add(new GameCardSwitch());
+
         return this;
     }
 

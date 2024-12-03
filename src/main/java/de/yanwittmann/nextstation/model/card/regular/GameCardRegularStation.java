@@ -16,6 +16,7 @@ import java.util.stream.Collectors;
 public class GameCardRegularStation extends GameCard {
 
     private CardSymbol cardType = CardSymbol.RECTANGLE;
+    private String description = "Station";
 
     public GameCardRegularStation() {
         super("GameCardRegularStation");
@@ -23,6 +24,7 @@ public class GameCardRegularStation extends GameCard {
 
     @Override
     public TextureAccess.TextureData getTexture() {
+        this.description = "Build a connection to a " + cardType.name().toLowerCase() + " station.";
         return TextureAccess.TexturesIndex.CARD_STATION_UNDERGROUND.get()
                 .overlay(cardType.getTexture().cropToVisibleArea(), 335, 66, 109, 109);
     }
