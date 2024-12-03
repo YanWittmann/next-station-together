@@ -7,6 +7,7 @@ import lombok.Data;
 import lombok.Getter;
 
 @Data
+@AllArgsConstructor
 public class RailwayConnectionIntersection implements TextureProvider {
     private int x, y;
     private Direction bottom;

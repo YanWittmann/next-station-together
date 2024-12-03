@@ -1,5 +1,6 @@
 package de.yanwittmann.nextstation.model;
 
+import de.yanwittmann.nextstation.model.board.RailwayConnectionIntersection;
 import de.yanwittmann.nextstation.model.board.RiverLayout;
 import de.yanwittmann.nextstation.model.board.Station;
 import de.yanwittmann.nextstation.setup.BoardOptimizer;
@@ -233,6 +234,15 @@ class GameBoardTest {
         board.addStation(5, 4, Station.StationType.JOKER);
         board.addStation(4, 5, Station.StationType.JOKER);
         board.addStation(5, 5, Station.StationType.JOKER);
+
+        board.getIntersections().add(new RailwayConnectionIntersection(3, 1, RailwayConnectionIntersection.Direction.LEFT_TO_RIGHT, RailwayConnectionIntersection.Direction.UP_TO_DOWN));
+        board.getIntersections().add(new RailwayConnectionIntersection(6, 1, RailwayConnectionIntersection.Direction.LEFT_TO_RIGHT, RailwayConnectionIntersection.Direction.UP_TO_DOWN));
+        board.getIntersections().add(new RailwayConnectionIntersection(1, 4, RailwayConnectionIntersection.Direction.LEFT_TO_RIGHT, RailwayConnectionIntersection.Direction.BOTTOM_LEFT_TO_TOP_RIGHT));
+        board.getIntersections().add(new RailwayConnectionIntersection(8, 3, RailwayConnectionIntersection.Direction.LEFT_TO_RIGHT, RailwayConnectionIntersection.Direction.UP_TO_DOWN));
+        board.getIntersections().add(new RailwayConnectionIntersection(3, 7, RailwayConnectionIntersection.Direction.UP_TO_DOWN, RailwayConnectionIntersection.Direction.TOP_LEFT_TO_BOTTOM_RIGHT));
+        board.getIntersections().add(new RailwayConnectionIntersection(7, 6, RailwayConnectionIntersection.Direction.UP_TO_DOWN, RailwayConnectionIntersection.Direction.TOP_LEFT_TO_BOTTOM_RIGHT));
+        board.getIntersections().add(new RailwayConnectionIntersection(2, 8, RailwayConnectionIntersection.Direction.LEFT_TO_RIGHT, RailwayConnectionIntersection.Direction.UP_TO_DOWN));
+        board.getIntersections().add(new RailwayConnectionIntersection(5, 8, RailwayConnectionIntersection.Direction.LEFT_TO_RIGHT, RailwayConnectionIntersection.Direction.TOP_LEFT_TO_BOTTOM_RIGHT));
 
         RiverLayout riverLayout = board.getRiverLayout();
 
