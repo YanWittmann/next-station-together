@@ -17,6 +17,7 @@ public class TextureAccess {
     public final static String TEXTURE_DIR = "/board/texture/";
     public final static String BOARD_DIR = "board/";
     public final static String SCORE_DIR = "score/";
+    public final static String CARD_DIR = "card/";
 
     @Data
     public static class TextureData {
@@ -34,7 +35,7 @@ public class TextureAccess {
 
         public TextureData overlay(TextureData overlay, int x, int y, int width, int height) {
             final BufferedImage scaledOverlay = scaleImage(overlay.image, width, height);
-            return new TextureData(path + "/" + overlay.path, overlayImages(image, scaledOverlay, x, y));
+            return new TextureData(path + "/" + overlay.path + "_" + x + "-" + y + "-" + width + "-" + height, overlayImages(image, scaledOverlay, x, y));
         }
 
         public TextureData tintNonTransparent(Color tintColor, float tintOpacity) {
@@ -230,6 +231,12 @@ public class TextureAccess {
         STATION_SHAPE_PENTAGON(TEXTURE_DIR + BOARD_DIR + "station_shape_pentagon.png"),
         STATION_SHAPE_JOKER(TEXTURE_DIR + BOARD_DIR + "station_shape_joker.png"),
         STATION_SHAPE_MONUMENT(TEXTURE_DIR + BOARD_DIR + "station_shape_monument.png"),
+
+        CARD_SYMBOL_JOKER(TEXTURE_DIR + CARD_DIR + "symbol_joker.png"),
+        CARD_STATION_UNDERGROUND(TEXTURE_DIR + CARD_DIR + "underground.png"),
+        CARD_SWITCH(TEXTURE_DIR + CARD_DIR + "switch.png"),
+        CARD_FREE_ENTRY(TEXTURE_DIR + CARD_DIR + "free_entry.png"),
+        CARD_SHARED_OBJECTIVE(TEXTURE_DIR + CARD_DIR + "shared_objective_"),
 
         CONNECTION_INTERSECTION(TEXTURE_DIR + BOARD_DIR + "crossing_"),
         CONNECTION_WALKED_INTERSECTION(TEXTURE_DIR + BOARD_DIR + "crossing_walked_"),

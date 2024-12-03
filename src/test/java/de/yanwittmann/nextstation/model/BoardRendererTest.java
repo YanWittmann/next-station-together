@@ -54,7 +54,7 @@ public class BoardRendererTest extends Canvas {
 
     private void drawDistricts(Graphics g) {
         g.setColor(Color.YELLOW);
-        ((Graphics2D) g).setStroke(new BasicStroke(3));
+        ((Graphics2D) g).setStroke(new BasicStroke(4));
         for (int i = 0; i < districts.length(); i++) {
             JSONObject district = districts.getJSONObject(i);
             int x = district.getInt("x") * STATION_SIZE;

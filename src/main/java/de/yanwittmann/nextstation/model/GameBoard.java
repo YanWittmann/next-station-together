@@ -3,7 +3,7 @@ package de.yanwittmann.nextstation.model;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import de.yanwittmann.nextstation.model.board.*;
-import de.yanwittmann.nextstation.model.card.StationCard;
+import de.yanwittmann.nextstation.model.card.GameCard;
 import de.yanwittmann.nextstation.model.score.ScoreContributor;
 import de.yanwittmann.nextstation.model.score.progress.ProgressScoreContributor;
 import de.yanwittmann.nextstation.util.TextureAccess;
@@ -27,10 +27,12 @@ public class GameBoard {
     private final List<Station> stations = new ArrayList<>();
     private final List<RailwayConnection> connections = new ArrayList<>();
     private final List<RailwayConnectionIntersection> intersections = new ArrayList<>();
-    private RiverLayout riverLayout;
+    private RiverLayout riverLayout = new RiverLayout();
 
     // cards
-    private final List<StationCard> stationCards = new ArrayList<>();
+    private final List<GameCard> stationCards = new ArrayList<>();
+    private final List<GameCard> sharedObjectiveCards = new ArrayList<>();
+    private final List<GameCard> bonusPerPenCards = new ArrayList<>();
 
     // scoring per turn: A * B + C
     private ScoreContributor turnWiseScoreContributorA;
@@ -69,7 +71,13 @@ public class GameBoard {
         for (Station station : stations) {
             TextureAccess.TextureData.write(station, imgDir);
         }
-        for (StationCard card : stationCards) {
+        for (GameCard card : stationCards) {
+            TextureAccess.TextureData.write(card, imgDir);
+        }
+        for (GameCard card : sharedObjectiveCards) {
+            TextureAccess.TextureData.write(card, imgDir);
+        }
+        for (GameCard card : bonusPerPenCards) {
             TextureAccess.TextureData.write(card, imgDir);
         }
         for (RailwayConnectionIntersection intersection : intersections) {
@@ -192,5 +200,11 @@ public class GameBoard {
 
     public String getRandomId() {
         return UUID.nameUUIDFromBytes(serialize().getBytes()).toString().substring(0, 8);
+    }
+
+    public Station addStation(int x, int y, Station.StationType type) {
+        final Station e = new Station(x, y, type, false, -1);
+        stations.add(e);
+        return e;
     }
 }

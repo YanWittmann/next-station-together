@@ -2,6 +2,10 @@ package de.yanwittmann.nextstation.setup;
 
 import de.yanwittmann.nextstation.model.GameBoard;
 import de.yanwittmann.nextstation.model.board.*;
+import de.yanwittmann.nextstation.model.card.regular.GameCardFreeEntry;
+import de.yanwittmann.nextstation.model.card.regular.GameCardRegularStation;
+import de.yanwittmann.nextstation.model.card.regular.GameCardSwitch;
+import de.yanwittmann.nextstation.model.card.shared.GameCardSharedObjective;
 import de.yanwittmann.nextstation.model.score.*;
 import de.yanwittmann.nextstation.model.score.progress.ProgressScoreCompoundContributor;
 import de.yanwittmann.nextstation.model.score.progress.ProgressScoreMonuments;
@@ -86,6 +90,11 @@ public class BoardTemplates {
         return this;
     }
 
+    public BoardTemplates districtsParisAddCenter() {
+        gameBoard.getDistricts().add(new BoardDistrict(4, 4, 2, 2));
+        return this;
+    }
+
 
     // stations
 
@@ -100,6 +109,32 @@ public class BoardTemplates {
 
     public BoardTemplates stationsFullyFillEvenlyDistributed() {
         final int totalStations = gameBoard.getWidth() * gameBoard.getHeight();
+        final List<Station.StationType> distributeTypes = getEvenlyDistributedStationTypeCounts(totalStations);
+        Collections.shuffle(distributeTypes);
+        for (int x = 0; x < gameBoard.getWidth(); x++) {
+            for (int y = 0; y < gameBoard.getHeight(); y++) {
+                final Station.StationType type = distributeTypes.remove(0);
+                gameBoard.getStations().add(Station.ofType(x, y, type));
+            }
+        }
+        return this;
+    }
+
+    public BoardTemplates stationsRedistributeTypes() {
+        final int totalStations = gameBoard.getStations().size();
+        final List<Station.StationType> distributeTypes = getEvenlyDistributedStationTypeCounts(totalStations);
+        final List<Station> remainingStations = new ArrayList<>(gameBoard.getStations());
+        // don't just pick the first one from the list, go over the board (Station.StationType.values().length - 1) times and pick the nth station to assign the current type
+        int index = (int) (Math.random() * remainingStations.size());
+        while (!remainingStations.isEmpty()) {
+            index = (index + remainingStations.size() / 4) % remainingStations.size();
+            final Station station = remainingStations.remove(index);
+            station.setType(distributeTypes.remove(0));
+        }
+        return this;
+    }
+
+    private List<Station.StationType> getEvenlyDistributedStationTypeCounts(int totalStations) {
         final int stationsPerType = totalStations / (Station.StationType.values().length - 1);
         final List<Station.StationType> distributeTypes = new ArrayList<>();
         for (Station.StationType type : Station.StationType.values()) {
@@ -108,13 +143,7 @@ public class BoardTemplates {
                 distributeTypes.add(type);
             }
         }
-        for (int x = 0; x < gameBoard.getWidth(); x++) {
-            for (int y = 0; y < gameBoard.getHeight(); y++) {
-                final Station.StationType type = distributeTypes.remove((int) (Math.random() * distributeTypes.size()));
-                gameBoard.getStations().add(Station.ofType(x, y, type));
-            }
-        }
-        return this;
+        return distributeTypes;
     }
 
     public BoardTemplates stationsPickStartingLocations() {
@@ -173,6 +202,13 @@ public class BoardTemplates {
                 }
             }
         }
+        return this;
+    }
+
+    public BoardTemplates monumentMakeAllJoker() {
+        gameBoard.getStations().stream()
+                .filter(Station::isMonument)
+                .forEach(station -> station.setType(Station.StationType.JOKER));
         return this;
     }
 
@@ -591,7 +627,7 @@ public class BoardTemplates {
             }
         }
 
-        log.info("Generated river layout of length [{} - {}]", bestRiver.getPath().size(),  bestRiver.pathLength());
+        log.info("Generated river layout of length [{} - {}]", bestRiver.getPath().size(), bestRiver.pathLength());
 
         gameBoard.setRiverLayout(bestRiver);
 
@@ -623,9 +659,58 @@ public class BoardTemplates {
         gameBoard.setEndGameScoreContributorC(with(new ScoreInterchangeStations(), i -> i.setAmountInterchanges(4), i -> i.setMultiplier(9)));
 
         gameBoard.setProgressScoreContributor(with(new ProgressScoreCompoundContributor(),
-                i-> i.setScoreContributorA(with(new ScoreIntersections(), j -> j.setMultiplier(2), j -> j.setUsedPaths(1))),
-                i-> i.setScoreContributorB(with(new ScoreIntersections(), j -> j.setMultiplier(6), j -> j.setUsedPaths(2)))
+                i -> i.setScoreContributorA(with(new ScoreIntersections(), j -> j.setMultiplier(6), j -> j.setUsedPaths(2))),
+                i -> i.setScoreContributorB(with(new ScoreIntersections(), j -> j.setMultiplier(2), j -> j.setUsedPaths(1)))
         ));
+        return this;
+    }
+
+    // cards
+
+    public BoardTemplates cardsStationRegular() {
+        for (GameCardRegularStation.CardSymbol cardSymbol : GameCardRegularStation.CardSymbol.excludingJoker()) {
+            gameBoard.getStationCards().add(with(new GameCardRegularStation(), i -> i.setCardType(cardSymbol)));
+        }
+        gameBoard.getStationCards().add(with(new GameCardRegularStation(), i -> i.setCardType(GameCardRegularStation.CardSymbol.JOKER)));
+
+        gameBoard.getStationCards().add(new GameCardSwitch());
+        return this;
+    }
+
+    public BoardTemplates cardsStationParis() {
+        gameBoard.getStationCards().add(new GameCardFreeEntry());
+        return this;
+    }
+
+    public BoardTemplates cardsSharedObjectiveAll() {
+        for (GameCardSharedObjective.CardSymbol cardSymbol : GameCardSharedObjective.CardSymbol.values()) {
+            gameBoard.getSharedObjectiveCards().add(with(new GameCardSharedObjective(), i -> i.setCardType(cardSymbol)));
+        }
+        return this;
+    }
+
+    public BoardTemplates cardsSharedObjectiveLondon() {
+        Arrays.asList(
+                GameCardSharedObjective.CardSymbol.FIVE_MONUMENTS,
+                GameCardSharedObjective.CardSymbol.SIX_RIVER_CROSSINGS,
+                GameCardSharedObjective.CardSymbol.EIGHT_DOUBLE_INTERCHANGES,
+                GameCardSharedObjective.CardSymbol.ALL_DISTRICTS,
+                GameCardSharedObjective.CardSymbol.ALL_STATIONS_IN_CENTRAL
+        ).forEach(
+                cardSymbol -> gameBoard.getSharedObjectiveCards().add(with(new GameCardSharedObjective(), i -> i.setCardType(cardSymbol))
+                ));
+        return this;
+    }
+
+    public BoardTemplates cardsSharedObjectiveParis() {
+        Arrays.asList(
+                GameCardSharedObjective.CardSymbol.THREE_TRIPLE_INTERSECTIONS,
+                GameCardSharedObjective.CardSymbol.SEVEN_DISTRICTS_IN_ONE_LINE,
+                GameCardSharedObjective.CardSymbol.ANY_JOINED_LINE_TWO_DOUBLE_INTERSECTIONS,
+                GameCardSharedObjective.CardSymbol.ANY_JOINED_LINE_SIX_MONUMENTS
+        ).forEach(
+                cardSymbol -> gameBoard.getSharedObjectiveCards().add(with(new GameCardSharedObjective(), i -> i.setCardType(cardSymbol))
+                ));
         return this;
     }
 }

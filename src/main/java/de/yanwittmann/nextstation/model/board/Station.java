@@ -4,6 +4,7 @@ import de.yanwittmann.nextstation.util.TextureAccess;
 import de.yanwittmann.nextstation.util.TextureProvider;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.Getter;
 
 import java.awt.*;
 
@@ -44,6 +45,8 @@ public class Station implements TextureProvider {
         return new Station(x, y, type, false, -1);
     }
 
+    @Getter
+    @AllArgsConstructor
     public enum StationType {
         RECTANGLE(TextureAccess.TexturesIndex.STATION_SHAPE_SQUARE.get()),
         CIRCLE(TextureAccess.TexturesIndex.STATION_SHAPE_CIRCLE.get()),
@@ -53,10 +56,6 @@ public class Station implements TextureProvider {
         JOKER(TextureAccess.TexturesIndex.STATION_SHAPE_JOKER.get());
 
         private final TextureAccess.TextureData texture;
-
-        StationType(TextureAccess.TextureData texture) {
-            this.texture = texture;
-        }
 
         public static StationType random() {
             return StationType.values()[(int) (Math.random() * StationType.values().length - 1)];

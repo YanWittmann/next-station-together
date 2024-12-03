@@ -12,6 +12,17 @@ public class RiverLayout {
     // will be offset by 0.5 to match the center of the connections
     private final List<Point> path = new ArrayList<>();
 
+    public void addPoint(Direction direction, float length) {
+        final Point last = path.isEmpty() ? new Point(0, 0) : path.get(path.size() - 1);
+        path.add(new Point(last.x + direction.getDx() * length, last.y + direction.getDy() * length));
+    }
+
+    public void addPoints(Point... points) {
+        for (Point point : points) {
+            path.add(new Point(point.x + 0.5f, point.y + 0.5f));
+        }
+    }
+
     public float pathLength() {
         float length = 0;
         for (int i = 1; i < path.size(); i++) {

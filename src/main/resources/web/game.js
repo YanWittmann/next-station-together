@@ -28,7 +28,7 @@ function initializeGame() {
 }
 
 class GameBoard {
-    constructor(canvas) {
+    constructor(canvas, activeBoardId) {
         this.canvas = canvas;
         this.ctx = canvas.getContext('2d');
         this.STATION_SIZE = 75;
@@ -39,6 +39,8 @@ class GameBoard {
         this.boardData = null;
         this.iconCache = new Map();
         this.selectedColor = 'rgb(255, 145, 35)'; // Default color
+        this.isDestroyed = false;
+        this.activeBoardId = activeBoardId;
 
         this.setupCanvas();
         this.setupEventListeners();
@@ -97,6 +99,10 @@ class GameBoard {
             console.log('Board data loaded:', this.boardData);
         } catch (error) {
             console.error('Error loading board data:', error);
+            this.ctx.fillStyle = 'blue';
+            this.ctx.font = '24px Arial';
+            this.ctx.textAlign = 'center';
+            this.ctx.fillText('Unknown Board Id!', this.canvas.width / 2, this.canvas.height / 4);
         }
     }
 
@@ -121,6 +127,7 @@ class GameBoard {
     }
 
     draw() {
+        if (this.isDestroyed) return;
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
         this.drawRiver();
@@ -174,7 +181,7 @@ class GameBoard {
     drawDistricts() {
         this.ctx.strokeStyle = getComputedStyle(document.documentElement)
             .getPropertyValue('--district-color').trim();
-        this.ctx.lineWidth = 3;
+        this.ctx.lineWidth = 4;
 
         this.boardData.districts.forEach(district => {
             const x = district.x * this.STATION_SIZE;
@@ -269,6 +276,7 @@ class GameBoard {
     }
 
     handleMouseDown(e) {
+        if (this.isDestroyed) return;
         const rect = this.canvas.getBoundingClientRect();
         const mouseX = (e.clientX - rect.left) / this.scale;
         const mouseY = (e.clientY - rect.top) / this.scale;
@@ -294,6 +302,7 @@ class GameBoard {
     }
 
     handleMouseMove(e) {
+        if (this.isDestroyed) return;
         if (!this.dragStart) return;
 
         const rect = this.canvas.getBoundingClientRect();
@@ -316,6 +325,7 @@ class GameBoard {
     }
 
     handleMouseUp(e) {
+        if (this.isDestroyed) return;
         if (!this.dragStart || !this.currentConnection) {
             this.dragStart = null;
             this.currentConnection = null;
@@ -349,6 +359,7 @@ class GameBoard {
     }
 
     handleRightClick(e) {
+        if (this.isDestroyed) return;
         const rect = this.canvas.getBoundingClientRect();
         const x = (e.clientX - rect.left) / this.scale;
         const y = (e.clientY - rect.top) / this.scale;
@@ -644,6 +655,7 @@ class GameBoard {
     }
 
     destroyBoard() {
+        this.isDestroyed = true;
         // listeners
         this.canvas.removeEventListener('mousedown', this.handleMouseDown);
         this.canvas.removeEventListener('mousemove', this.handleMouseMove);
