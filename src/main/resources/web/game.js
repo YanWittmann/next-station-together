@@ -523,10 +523,10 @@ class GameBoard {
         }
 
         // turnwise score calculation
-        connectInputs(1, 6, [{ x: 1, y: 0 }, { x: 1, y: 2 }, { x: 1, y: 4 }], ([a, b, c]) => a * b + c);
-        connectInputs(3, 6, [{ x: 3, y: 0 }, { x: 3, y: 2 }, { x: 3, y: 4 }], ([a, b, c]) => a * b + c);
-        connectInputs(5, 6, [{ x: 5, y: 0 }, { x: 5, y: 2 }, { x: 5, y: 4 }], ([a, b, c]) => a * b + c);
-        connectInputs(7, 6, [{ x: 7, y: 0 }, { x: 7, y: 2 }, { x: 7, y: 4 }], ([a, b, c]) => a * b + c);
+        connectInputs(1, 6, [{ x: 1, y: 0 }, { x: 1, y: 2 }, { x: 1, y: 4 }], ([a, b, c]) => (this.boardData.turnWiseScoreContributorA.multiplier * a) * (this.boardData.turnWiseScoreContributorB.multiplier * b) + (this.boardData.turnWiseScoreContributorC.multiplier * c));
+        connectInputs(3, 6, [{ x: 3, y: 0 }, { x: 3, y: 2 }, { x: 3, y: 4 }], ([a, b, c]) => (this.boardData.turnWiseScoreContributorA.multiplier * a) * (this.boardData.turnWiseScoreContributorB.multiplier * b) + (this.boardData.turnWiseScoreContributorC.multiplier * c));
+        connectInputs(5, 6, [{ x: 5, y: 0 }, { x: 5, y: 2 }, { x: 5, y: 4 }], ([a, b, c]) => (this.boardData.turnWiseScoreContributorA.multiplier * a) * (this.boardData.turnWiseScoreContributorB.multiplier * b) + (this.boardData.turnWiseScoreContributorC.multiplier * c));
+        connectInputs(7, 6, [{ x: 7, y: 0 }, { x: 7, y: 2 }, { x: 7, y: 4 }], ([a, b, c]) => (this.boardData.turnWiseScoreContributorA.multiplier * a) * (this.boardData.turnWiseScoreContributorB.multiplier * b) + (this.boardData.turnWiseScoreContributorC.multiplier * c));
 
         // endgame score calculation
         connectInputs(13, 0, [{ x: 11, y: 0 }], ([a]) => a * this.boardData.endGameScoreContributorA.multiplier);
@@ -566,6 +566,7 @@ class GameBoard {
                         container.style.filter = selected ? 'none' : 'drop-shadow(0 0 3px red)';
                         const selectedMonuments = Array.from(monumentContainers).filter(c => c.dataset.selected === 'true').length;
                         input11_6.value = progressScoreContributor.fields[selectedMonuments] || 0;
+                        input11_6.dispatchEvent(new Event('input', { bubbles: true }));
                     });
                 });
             }

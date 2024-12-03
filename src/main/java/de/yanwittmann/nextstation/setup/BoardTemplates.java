@@ -124,12 +124,12 @@ public class BoardTemplates {
         final int totalStations = gameBoard.getStations().size();
         final List<Station.StationType> distributeTypes = getEvenlyDistributedStationTypeCounts(totalStations);
         final List<Station> remainingStations = new ArrayList<>(gameBoard.getStations());
-        // don't just pick the first one from the list, go over the board (Station.StationType.values().length - 1) times and pick the nth station to assign the current type
-        int index = (int) (Math.random() * remainingStations.size());
-        while (!remainingStations.isEmpty()) {
-            index = (index + remainingStations.size() / 4) % remainingStations.size();
-            final Station station = remainingStations.remove(index);
+        Collections.shuffle(remainingStations);
+        int index = 0;
+        while (!remainingStations.isEmpty() && !distributeTypes.isEmpty()) {
+            final Station station = remainingStations.remove(index % remainingStations.size());
             station.setType(distributeTypes.remove(0));
+            index++;
         }
         return this;
     }
@@ -646,6 +646,23 @@ public class BoardTemplates {
         gameBoard.setEndGameScoreContributorC(with(new ScoreInterchangeStations(), i -> i.setAmountInterchanges(4), i -> i.setMultiplier(9)));
 
         gameBoard.setProgressScoreContributor(new ProgressScoreMonuments());
+        return this;
+    }
+
+    public BoardTemplates scoreLondonAlt() {
+        gameBoard.setTurnWiseScoreContributorA(new ScoreDistrictsVisited());
+        gameBoard.setTurnWiseScoreContributorB(new ScoreMaxStationsInDistrict());
+        gameBoard.setTurnWiseScoreContributorC(with(new ScoreRiverCrossings(), i -> i.setMultiplier(2)));
+
+        gameBoard.setEndGameScoreContributorA(with(new ScoreInterchangeStations(), i -> i.setAmountInterchanges(2), i -> i.setMultiplier(2)));
+        gameBoard.setEndGameScoreContributorB(with(new ScoreInterchangeStations(), i -> i.setAmountInterchanges(3), i -> i.setMultiplier(5)));
+        gameBoard.setEndGameScoreContributorC(with(new ScoreInterchangeStations(), i -> i.setAmountInterchanges(4), i -> i.setMultiplier(9)));
+
+        gameBoard.setProgressScoreContributor(with(new ProgressScoreCompoundContributor(),
+                i -> i.setScoreContributorA(with(new ScoreIntersections(), j -> j.setMultiplier(6), j -> j.setUsedPaths(2))),
+                i -> i.setScoreContributorB(with(new ScoreIntersections(), j -> j.setMultiplier(2), j -> j.setUsedPaths(1))),
+                i -> i.setScoreContributorC(new ScoreMonumentsVisited())
+        ));
         return this;
     }
 

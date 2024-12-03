@@ -28,7 +28,7 @@ class GameBoardTest {
                                 /*.districtsParis()
                                 .stationsFullyFillEvenlyDistributed()
                                 .stationsRemovePercent(0.52f, Map.of(BoardTemplates.LooseDistrictDefinition.CENTERMOST, 9), 4),*/
-                        BoardOptimizer.STATION_SPREAD, true, 200)
+                        BoardOptimizer.STATION_SPREAD, true, 1)
                 .stationsRedistributeTypes()
                 .stationsPickStartingLocations()
                 .stationStartingRedistributeTypes()
@@ -45,7 +45,8 @@ class GameBoardTest {
                 .cardsStationRegular()
 
                 // .scoreLondon()
-                .scoreParis().monumentMakeAllJoker().cardsStationParis()
+                .scoreLondonAlt()
+                // .scoreParis().monumentMakeAllJoker().cardsStationParis()
 
                 .cardsSharedObjectiveAll()
 
@@ -55,11 +56,11 @@ class GameBoardTest {
         board.writeSerialized(outDir);
 
         Frame frame = BoardRendererTest.display(outDir);
-        try {
+        /*try {
             Thread.sleep(TimeUnit.MINUTES.toMillis(10));
         } catch (InterruptedException e) {
             log.error("Thread interrupted", e);
-        }
+        }*/
         frame.dispatchEvent(new WindowEvent(frame, WindowEvent.WINDOW_CLOSING));
     }
 
@@ -264,6 +265,7 @@ class GameBoardTest {
                 .connectionsPruneMaxDistance(5)
                 .connectionsPruneInvalidIntersections()
                 .cardsStationRegular()
+                .cardsStationParis()
                 .cardsSharedObjectiveParis()
                 .scoreParis();
 
