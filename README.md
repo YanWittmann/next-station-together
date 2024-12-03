@@ -1,7 +1,8 @@
 # Next Station Together
 
 A highly customizable dynamic board generator and playable web interface for the board game series Next Station.
-Rules are taken from the original games, as found in [sources.md](ref/sources.md).
+Rules are taken from the original games, as found in [sources.md](ref/sources.md),
+and see the [Legal Disclaimer and Attribution](#legal-disclaimer-and-attribution) for more details on the original game.
 
 <table>
   <tr>

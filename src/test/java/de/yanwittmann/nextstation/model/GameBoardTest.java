@@ -22,13 +22,13 @@ class GameBoardTest {
     @Test
     public void createBoardOptimizerTest() throws IOException {
         final GameBoard board = BoardOptimizer.runIterations(() -> BoardTemplates.start()
-                                /*.districtsLondon()
+                                .districtsLondon()
                                 .stationsFullyFillEvenlyDistributed()
-                                .stationsRemovePercent(0.47f, Map.of(BoardTemplates.LooseDistrictDefinition.CENTERMOST, 9), 4),*/
-                                .districtsParis()
+                                .stationsRemovePercent(0.47f, Map.of(BoardTemplates.LooseDistrictDefinition.CENTERMOST, 9), 4),
+                                /*.districtsParis()
                                 .stationsFullyFillEvenlyDistributed()
-                                .stationsRemovePercent(0.52f, Map.of(BoardTemplates.LooseDistrictDefinition.CENTERMOST, 9), 4),
-                        BoardOptimizer.STATION_SPREAD, true, 1)
+                                .stationsRemovePercent(0.52f, Map.of(BoardTemplates.LooseDistrictDefinition.CENTERMOST, 9), 4),*/
+                        BoardOptimizer.STATION_SPREAD, true, 200)
                 .stationsRedistributeTypes()
                 .stationsPickStartingLocations()
                 .stationStartingRedistributeTypes()
